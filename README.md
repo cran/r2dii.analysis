@@ -13,8 +13,6 @@ status](https://www.r-pkg.org/badges/version/r2dii.analysis)](https://CRAN.R-pro
 coverage](https://codecov.io/gh/2degreesinvesting/r2dii.analysis/branch/master/graph/badge.svg)](https://codecov.io/gh/2degreesinvesting/r2dii.analysis?branch=master)
 [![R build
 status](https://github.com/2DegreesInvesting/r2dii.analysis/workflows/R-CMD-check/badge.svg)](https://github.com/2DegreesInvesting/r2dii.analysis/actions)
-[![R build
-status](https://github.com/2degreesinvesting/r2dii.analysis/workflows/R-CMD-check/badge.svg)](https://github.com/2degreesinvesting/r2dii.analysis/actions)
 <!-- badges: end -->
 
 These tools help you to assess if a financial portfolio aligns with
@@ -27,12 +25,29 @@ to study how their capital allocation impacts the climate.
 
 ## Installation
 
-Install the development version of r2dii.analysis with:
+Before you install r2dii.analysis you may want to:
+
+  - [Try an rstudio.cloud project with this package already
+    installed](https://rstudio.cloud/project/1424833).
+  - [Learn how to minimize installation
+    errors](https://gist.github.com/maurolepore/a0187be9d40aee95a43f20a85f4caed6#installation).
+
+When you are ready, install the released version of r2dii.analysis from
+CRAN with:
+
+``` r
+install.packages("r2dii.analysis")
+```
+
+Or install the development version of r2dii.analysis from GitHub with:
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("2DegreesInvesting/r2dii.analysis")
 ```
+
+[How to raise an
+issue?](https://2degreesinvesting.github.io/posts/2020-06-26-instructions-to-raise-an-issue/)
 
 ## Example
 
@@ -71,21 +86,21 @@ matched %>%
     ald = ald_demo,
     co2_intensity_scenario = co2_intensity_scenario_demo
   )
-#> # A tibble: 28 x 4
-#> # Groups:   sector [1]
-#>    sector  year emission_factor_metric emission_factor_value
-#>    <chr>  <dbl> <chr>                                  <dbl>
-#>  1 cement  2020 projected                              0.664
-#>  2 cement  2020 target                                 0.669
-#>  3 cement  2020 scenario_benchmark                     0.7  
-#>  4 cement  2021 projected                              0.665
-#>  5 cement  2021 target                                 0.612
-#>  6 cement  2021 scenario_benchmark                     0.64 
-#>  7 cement  2022 projected                              0.666
-#>  8 cement  2022 target                                 0.555
-#>  9 cement  2022 scenario_benchmark                     0.580
-#> 10 cement  2023 projected                              0.667
-#> # … with 18 more rows
+#> Warning: Removing ald rows where `emission_factor` is NA
+#> # A tibble: 208 x 4
+#>    sector      year emission_factor_metric emission_factor_value
+#>    <chr>      <dbl> <chr>                                  <dbl>
+#>  1 automotive  2002 projected                              0.228
+#>  2 automotive  2003 projected                              0.226
+#>  3 automotive  2004 projected                              0.224
+#>  4 automotive  2005 projected                              0.222
+#>  5 automotive  2006 projected                              0.220
+#>  6 automotive  2007 projected                              0.218
+#>  7 automotive  2008 projected                              0.216
+#>  8 automotive  2009 projected                              0.214
+#>  9 automotive  2010 projected                              0.212
+#> 10 automotive  2011 projected                              0.210
+#> # … with 198 more rows
 ```
 
   - Use `target_market_share` to calculate market-share scenario targets
@@ -100,20 +115,20 @@ matched %>%
     scenario = scenario_demo_2020,
     region_isos = region_isos_demo
   )
-#> # A tibble: 1,170 x 7
-#>    sector technology  year region scenario_source weighted_produc…
-#>    <chr>  <chr>      <int> <chr>  <chr>           <chr>           
-#>  1 autom… electric    2020 global demo_2020       projected       
-#>  2 autom… electric    2020 global demo_2020       normalized_corp…
-#>  3 autom… electric    2020 global demo_2020       target_cps      
-#>  4 autom… electric    2020 global demo_2020       target_sds      
-#>  5 autom… electric    2020 global demo_2020       target_sps      
-#>  6 autom… hybrid      2020 global demo_2020       projected       
-#>  7 autom… hybrid      2020 global demo_2020       normalized_corp…
-#>  8 autom… hybrid      2020 global demo_2020       target_cps      
-#>  9 autom… hybrid      2020 global demo_2020       target_sds      
-#> 10 autom… hybrid      2020 global demo_2020       target_sps      
-#> # … with 1,160 more rows, and 1 more variable: weighted_production_value <dbl>
+#> # A tibble: 1,170 x 8
+#>    sector technology  year region scenario_source metric production
+#>    <chr>  <chr>      <int> <chr>  <chr>           <chr>       <dbl>
+#>  1 autom… electric    2020 global demo_2020       proje…    145942.
+#>  2 autom… electric    2020 global demo_2020       corpo…   8134869.
+#>  3 autom… electric    2020 global demo_2020       targe…    145942.
+#>  4 autom… electric    2020 global demo_2020       targe…    145942.
+#>  5 autom… electric    2020 global demo_2020       targe…    145942.
+#>  6 autom… electric    2021 global demo_2020       proje…    148212.
+#>  7 autom… electric    2021 global demo_2020       corpo…   8183411.
+#>  8 autom… electric    2021 global demo_2020       targe…    148361.
+#>  9 autom… electric    2021 global demo_2020       targe…    160625.
+#> 10 autom… electric    2021 global demo_2020       targe…    149016.
+#> # … with 1,160 more rows, and 1 more variable: technology_share <dbl>
 ```
 
   - Or at the company level:
@@ -128,20 +143,24 @@ matched %>%
     region_isos = region_isos_demo,
     by_company = TRUE
   )
-#> # A tibble: 15,945 x 8
-#>    sector technology  year region scenario_source name_ald weighted_produc…
-#>    <chr>  <chr>      <int> <chr>  <chr>           <chr>    <chr>           
-#>  1 autom… electric    2020 global demo_2020       shangha… projected       
-#>  2 autom… electric    2020 global demo_2020       shangha… normalized_corp…
-#>  3 autom… electric    2020 global demo_2020       shangha… target_cps      
-#>  4 autom… electric    2020 global demo_2020       shangha… target_sds      
-#>  5 autom… electric    2020 global demo_2020       shangha… target_sps      
-#>  6 autom… electric    2020 global demo_2020       sichuan… projected       
-#>  7 autom… electric    2020 global demo_2020       sichuan… normalized_corp…
-#>  8 autom… electric    2020 global demo_2020       sichuan… target_cps      
-#>  9 autom… electric    2020 global demo_2020       sichuan… target_sds      
-#> 10 autom… electric    2020 global demo_2020       sichuan… target_sps      
-#> # … with 15,935 more rows, and 1 more variable: weighted_production_value <dbl>
+#> Warning: You've supplied `by_company = TRUE` and `weight_production = TRUE`.
+#> This will result in company-level results, weighted by the portfolio
+#> loan size, which is rarely useful. Did you mean to set one of these
+#> arguments to `FALSE`?
+#> # A tibble: 15,945 x 9
+#>    sector technology  year region scenario_source name_ald metric production
+#>    <chr>  <chr>      <int> <chr>  <chr>           <chr>    <chr>       <dbl>
+#>  1 autom… electric    2020 global demo_2020       shangha… proje…      5140.
+#>  2 autom… electric    2020 global demo_2020       shangha… corpo…   8134869.
+#>  3 autom… electric    2020 global demo_2020       shangha… targe…      5140.
+#>  4 autom… electric    2020 global demo_2020       shangha… targe…      5140.
+#>  5 autom… electric    2020 global demo_2020       shangha… targe…      5140.
+#>  6 autom… electric    2020 global demo_2020       sichuan… proje…      2992.
+#>  7 autom… electric    2020 global demo_2020       sichuan… corpo…   8134869.
+#>  8 autom… electric    2020 global demo_2020       sichuan… targe…      2992.
+#>  9 autom… electric    2020 global demo_2020       sichuan… targe…      2992.
+#> 10 autom… electric    2020 global demo_2020       sichuan… targe…      2992.
+#> # … with 15,935 more rows, and 1 more variable: technology_share <dbl>
 ```
 
 ### Utility Functions
@@ -172,36 +191,40 @@ loanbook_joined_to_ald_scenario <- matched %>%
 # portfolio level
 loanbook_joined_to_ald_scenario %>%
   summarize_weighted_production(scenario, tmsr, smsp, region)
-#> # A tibble: 702 x 8
-#>    sector     technology  year scenario  tmsr    smsp region weighted_production
-#>    <chr>      <chr>      <int> <chr>    <dbl>   <dbl> <chr>                <dbl>
-#>  1 automotive electric    2020 cps       1    0       global             148935.
-#>  2 automotive electric    2020 sds       1    0       global             148935.
-#>  3 automotive electric    2020 sps       1    0       global             148935.
-#>  4 automotive electric    2021 cps       1.12 0.00108 global             150875.
-#>  5 automotive electric    2021 sds       1.16 0.00653 global             150875.
-#>  6 automotive electric    2021 sps       1.14 0.00137 global             150875.
-#>  7 automotive electric    2022 cps       1.24 0.00213 global             152816.
-#>  8 automotive electric    2022 sds       1.32 0.0131  global             152816.
-#>  9 automotive electric    2022 sps       1.29 0.00273 global             152816.
-#> 10 automotive electric    2023 cps       1.35 0.00316 global             154757.
-#> # … with 692 more rows
+#> # A tibble: 702 x 9
+#>    sector_ald technology  year scenario  tmsr    smsp region weighted_produc…
+#>    <chr>      <chr>      <int> <chr>    <dbl>   <dbl> <chr>             <dbl>
+#>  1 automotive electric    2020 cps       1    0       global          145942.
+#>  2 automotive electric    2020 sds       1    0       global          145942.
+#>  3 automotive electric    2020 sps       1    0       global          145942.
+#>  4 automotive electric    2021 cps       1.12 0.00108 global          148212.
+#>  5 automotive electric    2021 sds       1.16 0.00653 global          148212.
+#>  6 automotive electric    2021 sps       1.14 0.00137 global          148212.
+#>  7 automotive electric    2022 cps       1.24 0.00213 global          150481.
+#>  8 automotive electric    2022 sds       1.32 0.0131  global          150481.
+#>  9 automotive electric    2022 sps       1.29 0.00273 global          150481.
+#> 10 automotive electric    2023 cps       1.35 0.00316 global          152751.
+#> # … with 692 more rows, and 1 more variable: weighted_technology_share <dbl>
 
 # company level
 loanbook_joined_to_ald_scenario %>%
   summarize_weighted_production(scenario, tmsr, smsp, region, name_ald)
-#> # A tibble: 9,567 x 9
-#>    sector technology  year scenario  tmsr  smsp region name_ald weighted_produc…
-#>    <chr>  <chr>      <int> <chr>    <dbl> <dbl> <chr>  <chr>               <dbl>
-#>  1 autom… electric    2020 cps          1     0 global shangha…            5140.
-#>  2 autom… electric    2020 cps          1     0 global sichuan…            5985.
-#>  3 autom… electric    2020 cps          1     0 global singula…            8674.
-#>  4 autom… electric    2020 cps          1     0 global south-e…           14409.
-#>  5 autom… electric    2020 cps          1     0 global suzuki …            6019.
-#>  6 autom… electric    2020 cps          1     0 global tata gr…             876.
-#>  7 autom… electric    2020 cps          1     0 global tesla i…            6208.
-#>  8 autom… electric    2020 cps          1     0 global toyota …           19860.
-#>  9 autom… electric    2020 cps          1     0 global volkswa…            9258.
-#> 10 autom… electric    2020 cps          1     0 global wheego              9804.
-#> # … with 9,557 more rows
+#> # A tibble: 9,567 x 10
+#>    sector_ald technology  year scenario  tmsr  smsp region name_ald
+#>    <chr>      <chr>      <int> <chr>    <dbl> <dbl> <chr>  <chr>   
+#>  1 automotive electric    2020 cps          1     0 global shangha…
+#>  2 automotive electric    2020 cps          1     0 global sichuan…
+#>  3 automotive electric    2020 cps          1     0 global singula…
+#>  4 automotive electric    2020 cps          1     0 global south-e…
+#>  5 automotive electric    2020 cps          1     0 global suzuki …
+#>  6 automotive electric    2020 cps          1     0 global tata gr…
+#>  7 automotive electric    2020 cps          1     0 global tesla i…
+#>  8 automotive electric    2020 cps          1     0 global toyota …
+#>  9 automotive electric    2020 cps          1     0 global volkswa…
+#> 10 automotive electric    2020 cps          1     0 global wheego  
+#> # … with 9,557 more rows, and 2 more variables: weighted_production <dbl>,
+#> #   weighted_technology_share <dbl>
 ```
+
+[Get
+started](https://2degreesinvesting.github.io/r2dii.analysis/articles/r2dii-analysis.html).

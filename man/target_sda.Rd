@@ -5,7 +5,13 @@
 \title{Add targets for CO2 emissions per unit production at the portfolio level,
 using the SDA approach}
 \usage{
-target_sda(data, ald, co2_intensity_scenario, use_credit_limit = FALSE)
+target_sda(
+  data,
+  ald,
+  co2_intensity_scenario,
+  use_credit_limit = FALSE,
+  by_company = FALSE
+)
 }
 \arguments{
 \item{data}{A dataframe like the output of
@@ -19,6 +25,10 @@ target_sda(data, ald, co2_intensity_scenario, use_credit_limit = FALSE)
 \item{use_credit_limit}{Logical vector of length 1. \code{FALSE} defaults to using
 the column \code{loan_size_outstanding}. Set to \code{TRUE} to instead use the column
 \code{loan_size_credit_limit}.}
+
+\item{by_company}{Logical vector of length 1. \code{FALSE} defaults to outputting
+\code{weighted_production_value} at the portfolio-level. Set to \code{TRUE} to output
+\code{weighted_production_value} at the company-level.}
 }
 \value{
 A tibble with the CO2 emissions factors attributed to
@@ -39,30 +49,44 @@ This function ignores existing groups and outputs ungrouped data.
 }
 
 \examples{
-installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
-  requireNamespace("r2dii.match", quietly = TRUE)
+installed <- requireNamespace("r2dii.match", quietly = TRUE) &&
+  requireNamespace("r2dii.data", quietly = TRUE)
 if (!installed) stop("Please install r2dii.match and r2dii.data")
 
-library(r2dii.data)
 library(r2dii.match)
+library(r2dii.data)
 
-valid_matches <- match_name(loanbook_demo, ald_demo) \%>\%
-  # WARNING: Remember to validate matches (see `?prioritize`)
-  prioritize()
+# Example datasets from r2dii.data
+loanbook <- loanbook_demo
+ald <- ald_demo
+co2_scenario <- co2_intensity_scenario_demo
 
-out <- valid_matches \%>\%
-  target_sda(
-    ald = ald_demo,
-    co2_intensity_scenario = co2_intensity_scenario_demo
-  )
+# WARNING: Remember to validate matches (see `?prioritize`)
+matched <- prioritize(match_name(loanbook, ald))
+
+# You may need to clean your data
+anyNA(ald$emission_factor)
+try(target_sda(matched, ald, co2_intensity_scenario = co2_scenario))
+
+ald2 <- subset(ald, !is.na(emission_factor))
+anyNA(ald2$emission_factor)
+
+out <- target_sda(matched, ald2, co2_intensity_scenario = co2_scenario)
 
 # The output includes the portfolio's actual projected emissions factors, the
 # scenario pathway emissions factors, and the portfolio's target emissions
 # factors.
 out
 
-# Split view by metric
+# Split-view by metric
 split(out, out$emission_factor_metric)
+
+# Calculate company-level targets
+out <- target_sda(
+  matched, ald2,
+  co2_intensity_scenario = co2_scenario,
+  by_company = TRUE
+)
 }
 \seealso{
 Other functions to calculate scenario targets: 

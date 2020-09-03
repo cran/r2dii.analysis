@@ -10,7 +10,8 @@ target_market_share(
   scenario,
   region_isos = r2dii.data::region_isos,
   use_credit_limit = FALSE,
-  by_company = FALSE
+  by_company = FALSE,
+  weight_production = TRUE
 )
 }
 \arguments{
@@ -28,13 +29,17 @@ the column \code{loan_size_outstanding}. Set to \code{TRUE} to use the column
 \code{loan_size_credit_limit} instead.}
 
 \item{by_company}{Logical vector of length 1. \code{FALSE} defaults to outputting
-\code{weighted_production_value} at the portfolio-level. Set to \code{TRUE} to output
-\code{weighted_production_value} at the company-level.}
+\code{production_value} at the portfolio-level. Set to \code{TRUE} to output
+\code{production_value} at the company-level.}
+
+\item{weight_production}{Logical vector of length 1. \code{TRUE} defaults to
+outputting production, weighted by relative loan-size. Set to \code{FALSE} to
+output the unweighted production values.}
 }
 \value{
-A tibble with the summarized columns \code{weighted_production_metric}
-and \code{weighted_production_value}. If \code{by_company = TRUE}, the output will also
-have the column \code{name_ald}.
+A tibble with the summarized columns \code{metric}, \code{production} and
+\code{technology_share}. If \code{by_company = TRUE}, the output will also have the
+column \code{name_ald}.
 }
 \description{
 This function calculates the portfolio-level production targets, as
@@ -47,29 +52,42 @@ This function ignores existing groups and outputs ungrouped data.
 }
 
 \examples{
-library(r2dii.analysis)
+installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
+  requireNamespace("r2dii.match", quietly = TRUE)
+if (!installed) stop("Please install r2dii.match and r2dii.data")
+
 library(r2dii.data)
 library(r2dii.match)
 
-match_result <- r2dii.data::loanbook_demo \%>\%
-  r2dii.match::match_name(r2dii.data::ald_demo) \%>\%
-  r2dii.match::prioritize()
+matched <- loanbook_demo \%>\%
+  match_name(ald_demo) \%>\%
+  prioritize()
 
-# calculate targets at portfolio level
-target_market_share(match_result,
-  ald = r2dii.data::ald_demo,
-  scenario = r2dii.data::scenario_demo_2020,
-  region_isos = r2dii.data::region_isos_demo
-)
+# Calculate targets at portfolio level
+matched \%>\%
+  target_market_share(
+    ald = ald_demo,
+    scenario = scenario_demo_2020,
+    region_isos = region_isos_demo
+  )
 
-# calculate targets at company level
-target_market_share(match_result,
-  ald = r2dii.data::ald_demo,
-  scenario = r2dii.data::scenario_demo_2020,
-  region_isos = r2dii.data::region_isos_demo,
-  by_company = TRUE
-)
+# Calculate targets at company level
+matched \%>\%
+  target_market_share(
+    ald = ald_demo,
+    scenario = scenario_demo_2020,
+    region_isos = region_isos_demo,
+    by_company = TRUE
+  )
 
+matched \%>\%
+  target_market_share(
+    ald = ald_demo,
+    scenario = scenario_demo_2020,
+    region_isos = region_isos_demo,
+    # Calculate unweighted targets
+    weight_production = FALSE
+  )
 }
 \seealso{
 Other functions to calculate scenario targets: 

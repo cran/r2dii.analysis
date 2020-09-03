@@ -44,7 +44,9 @@ join_ald_scenario <- function(data,
   region_isos <- region_isos %>%
     rename(scenario_source = .data$source)
 
-  data %>%
+  ald <- modify_at_(ald, "sector", tolower)
+  ald <- modify_at_(ald, "technology", tolower)
+  out <- data %>%
     left_join(ald, by = ald_columns()) %>%
     inner_join(scenario, by = scenario_columns()) %>%
     warn_if_has_zero_rows("Joining `scenario` outputs 0 rows.") %>%
@@ -53,32 +55,30 @@ join_ald_scenario <- function(data,
       region_isos,
       by = c("region", "plant_location" = "isos", "scenario_source")
     ) %>%
-    warn_if_has_zero_rows("Joining `region_isos` outputs 0 rows.") %>%
-    # Return visibly
-    identity()
+    warn_if_has_zero_rows("Joining `region_isos` outputs 0 rows.")
+  out
 }
 
 warn_if_has_zero_rows <- function(data, message) {
-  if (nrow(data) == 0L) warn(message)
-
+  if (nrow(data) == 0L) warn(message = message, class = "has_zero_rows")
   invisible(data)
 }
 
 check_portfolio_ald_scenario <- function(valid_matches, ald, scenario) {
   check_crucial_names(valid_matches, names(ald_columns()))
-  walk(names(ald_columns()), ~ check_no_value_is_missing(valid_matches, .x))
+  walk_(names(ald_columns()), ~ check_no_value_is_missing(valid_matches, .x))
 
   check_crucial_names(
     ald, c("name_company", "plant_location", unname(scenario_columns()))
   )
-  walk(
+  walk_(
     c("name_company", unname(scenario_columns())),
     ~ check_no_value_is_missing(ald, .x)
   )
 
 
   check_crucial_names(scenario, c(scenario_columns(), "scenario_source", "region"))
-  walk(
+  walk_(
     c(scenario_columns(), "scenario_source", "region"),
     ~ check_no_value_is_missing(scenario, .x)
   )
