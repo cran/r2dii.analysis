@@ -1,6 +1,6 @@
 Package: r2dii.analysis
 Title: Tools to Calculate Climate Targets for Financial Portfolios
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     c(person(given = "Jackson",
              family = "Hoffart",
@@ -27,7 +27,7 @@ Description: These tools help you to assess if a financial
     Transition Assessment; <https://2degrees-investing.org/>). Financial
     institutions use 'PACTA' to study how their capital allocation impacts
     the climate.
-License: GPL-3
+License: MIT + file LICENSE
 URL: https://github.com/2DegreesInvesting/r2dii.analysis
 BugReports: https://github.com/2DegreesInvesting/r2dii.analysis/issues
 Depends: R (>= 3.4)
@@ -40,11 +40,11 @@ Language: en-US
 LazyData: true
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2020-09-03 13:55:56 UTC; jdhoffa
+Packaged: 2020-09-12 03:02:20 UTC; mauro
 Author: Jackson Hoffart [aut, cre] (<https://orcid.org/0000-0002-8600-5042>),
   Mauro Lepore [aut, ctr] (<https://orcid.org/0000-0002-1986-7988>),
   Klaus Hogedorn [aut],
   2 Degrees Investing Initiative [cph, fnd]
 Maintainer: Jackson Hoffart <jackson.hoffart@gmail.com>
 Repository: CRAN
-Date/Publication: 2020-09-03 14:10:03 UTC
+Date/Publication: 2020-09-12 13:50:03 UTC

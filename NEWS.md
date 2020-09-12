@@ -1,3 +1,16 @@
+# r2dii.analysis 0.1.1
+
+* Change license to MIT.
+
+* The website's home page now thanks founders.
+
+* `target_market_share()` now works as expected when some value of the column
+`scenario` is missing for some value of the column `region`. It no longer
+results in output columns `production` and `technology_share` of type "list"
+(#203).
+
+* The website now shows the News tab.
+
 # r2dii.analysis 0.1.0
 
 * `target_sda()` now correctly handles differing `country_of_domicile` inputs 

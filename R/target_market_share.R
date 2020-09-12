@@ -219,25 +219,45 @@ target_market_share <- function(data,
       .x = .data$weighted_production_target,
       weighted_technology_share_target = .data$.x / sum(.data$.x),
       .x = NULL
-    ) %>%
-    pivot_wider(
+    )
+
+  data <- data %>%
+    pivot_wider2(
       names_from = .data$scenario,
-      values_from = c(.data$weighted_production_target, .data$weighted_technology_share_target),
-      values_fn = list
-    ) %>%
-    tidyr::unnest(starts_with("weighted_production_")) %>%
-    tidyr::unnest(starts_with("weighted_technology_share_")) %>%
+      values_from = c(
+        .data$weighted_production_target,
+        .data$weighted_technology_share_target
+      )
+    )
+
+  data <- data %>%
     rename(
       weighted_production_projected = .data$weighted_production,
       weighted_technology_share_projected = .data$weighted_technology_share,
       sector = .data$sector_ald
-    )
+    ) %>%
+    pivot_longer(cols = starts_with("weighted_")) %>%
+    filter(!is.na(.data$value)) %>%
+    separate_metric_from_name()
 
   data %>%
-    pivot_longer(cols = starts_with("weighted_")) %>%
-    separate_metric_from_name() %>%
-    pivot_wider(names_from = .data$name) %>%
+    pivot_wider2() %>%
     ungroup()
+}
+
+pivot_wider2 <- function(data, ...) {
+  abort_if_has_list_colums(data)
+
+  out <- suppressWarnings(pivot_wider(data, ...))
+  unnest_list_columns(out)
+}
+
+unnest_list_columns <- function(data) {
+  if (utils::packageVersion("tidyr") < "1.1.2") {
+    suppressWarnings(unnest(data))
+  } else {
+    unnest(data, where(is.list))
+  }
 }
 
 tmsr_or_smsp <- function() {
@@ -277,6 +297,19 @@ maybe_group_by_name_ald <- function(data, ..., by_company = FALSE) {
 
   group_by(data, !!!rlang::syms(groups))
 }
+
+abort_if_has_list_colums <- function(data) {
+  if (has_list_colum(data)) {
+    abort("`data` must have no list column.")
+  }
+
+  invisible(data)
+}
+
+has_list_colum <- function(data) {
+  any(vapply(data, is.list, logical(1)))
+}
+
 
 add_ald_benchmark <- function(data, ald, region_isos, by_company) {
   ald_with_benchmark <- ald %>%
