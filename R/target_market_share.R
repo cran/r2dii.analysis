@@ -107,26 +107,37 @@ target_market_share <- function(data,
     by_company
   )
 
-  data <- data %>%
-    join_ald_scenario(ald, scenario, region_isos) %>%
-    {
-      if (weight_production) {
-        summarize_weighted_production(
-          .,
-          !!!rlang::syms(summary_groups),
-          use_credit_limit = use_credit_limit
-        )
-      } else {
-        summarize_unweighted_production(
-          .,
-          .data$sector_ald,
-          .data$technology,
-          .data$year,
-          !!!rlang::syms(summary_groups)
-        )
-      }
-    } %>%
-    add_ald_benchmark(ald, region_isos, by_company)
+  data <- join_ald_scenario(data, ald, scenario, region_isos)
+
+  if (weight_production) {
+    data <- summarize_weighted_production(
+      data,
+      !!!rlang::syms(summary_groups),
+      use_credit_limit = use_credit_limit
+    )
+  } else {
+    data <- summarize_unweighted_production(
+      data,
+      .data$sector_ald,
+      .data$technology,
+      .data$year,
+      !!!rlang::syms(summary_groups)
+    )
+  }
+
+  reweighting_groups <- maybe_add_name_ald(
+    c("sector_ald", "region", "scenario", "scenario_source", "year"),
+    by_company
+  )
+
+  data <- reweight_technology_share(
+    data,
+    !!!rlang::syms(reweighting_groups)
+  )
+
+  if (nrow(data) == 0) {
+    return(empty_target_market_share_output())
+  }
 
   target_groups <- c("sector_ald", "scenario", "year", "region")
 
@@ -240,8 +251,13 @@ target_market_share <- function(data,
     filter(!is.na(.data$value)) %>%
     separate_metric_from_name()
 
+  data <- data %>%
+    pivot_wider2()
+
+  ald_with_benchmark <- calculate_ald_benchmark(ald, region_isos, by_company)
+
   data %>%
-    pivot_wider2() %>%
+    rbind(ald_with_benchmark) %>%
     ungroup()
 }
 
@@ -311,8 +327,8 @@ has_list_colum <- function(data) {
 }
 
 
-add_ald_benchmark <- function(data, ald, region_isos, by_company) {
-  ald_with_benchmark <- ald %>%
+calculate_ald_benchmark <- function(ald, region_isos, by_company) {
+  out <- ald %>%
     filter(.data$is_ultimate_owner) %>%
     mutate(plant_location = tolower(.data$plant_location)) %>%
     inner_join(
@@ -325,22 +341,48 @@ add_ald_benchmark <- function(data, ald, region_isos, by_company) {
     group_by(
       .data$sector, .data$technology, .data$year, .data$region, .data$source
     ) %>%
-    summarize(weighted_production_corporate_economy = sum(.data$production)) %>%
+    summarize(production = sum(.data$production)) %>%
     group_by(
       .data$sector, .data$year, .data$region, .data$source
     ) %>%
     mutate(
-      .x = .data$weighted_production_corporate_economy,
-      weighted_technology_share_corporate_economy = .data$.x / sum(.data$.x),
-      .x = NULL
+      .x = .data$production,
+      technology_share = .data$.x / sum(.data$.x),
+      .x = NULL,
+      metric = "corporate_economy"
+    ) %>%
+    rename(
+      scenario_source = "source"
     )
 
+  if (by_company) {
+    out <- out %>%
+      mutate(name_ald = "corporate_economy")
+  }
+
+  out
+}
+
+empty_target_market_share_output <- function() {
+  tibble(
+    sector = character(0),
+    technology = character(0),
+    year = integer(0),
+    region = character(0),
+    scenario_source = character(0),
+    metric = character(0),
+    production = numeric(0),
+    technology_share = numeric(0)
+  )
+}
+
+reweight_technology_share <- function(data, ...) {
   data %>%
-    left_join(ald_with_benchmark, by = c(
-      sector_ald = "sector",
-      technology = "technology",
-      year = "year",
-      region = "region",
-      scenario_source = "source"
-    ))
+    group_by(...) %>%
+    mutate(
+      .x = .data$weighted_technology_share,
+      weighted_technology_share = .data$.x / sum(.data$.x),
+      .x = NULL
+    ) %>%
+    ungroup()
 }

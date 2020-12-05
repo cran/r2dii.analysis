@@ -1,3 +1,36 @@
+# r2dii.analysis 0.1.2
+
+* `target_market_share()` now outputs `weighted_technology_share` that 
+  correctly sums to 1 when grouped by `sector`, `metric` and `secnario` (#218).
+
+* `target_market_share()` now correctly outputs unweighted production when 
+  multiple loans exist for the same company (#239).
+
+* `target_market_share()` now outputs empty named tibble if no matching region 
+  definitions can be found (#236).
+  
+* `target_market_share` now outputs all technologies present in `ald`, even if 
+  they are not present in `data` (#235).
+
+* `target_sda()` now interpolates input scenario file by year and correctly 
+  calculates target, regardless of the time-horizon of `ald` (#234).
+
+* Hyperlinks on the "Get Started" tab of the website now points to correct links 
+  (#222 @apmanning).
+
+* Depend on dplyr >= 0.8.5, explicitly. We commit to this version because the
+  newer dplyr 1 is still relatively new, and represents a major change which
+  some users initially resist.
+
+* Relax dependency on rlang, as it is mostly driven dynamically by the 
+  by our recursive dependencies. For example, dplyr 0.8.5 depends on a specific
+  version of rlang that is more recent than the version we explicitly 
+  depended on -- which suggests that being explicit about rlang is unhelpful and
+  misleading.
+
+* New internal data `loanbook_stable` and `region_isos_stable` make regression
+  tests more stable (#227).
+
 # r2dii.analysis 0.1.1
 
 * Change license to MIT.
