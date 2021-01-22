@@ -403,7 +403,7 @@ test_that("outputs same names regardless of the value of `weight_production` (#1
   expect_equal(diff_names, character(0))
 })
 
-test_that("with known input outputs `technology_share` as expected (#184)", {
+test_that("with known input outputs `technology_share` as expected (#184, #262)", {
   matched <- fake_matched(
     id_loan = c("L1", "L2"),
     loan_size_outstanding = c(1, 3),
@@ -443,6 +443,76 @@ test_that("with known input outputs `technology_share` as expected (#184)", {
   expect_equal(
     out$target_sds$technology_share,
     c(0.923, 0.076),
+    tolerance = 1e-3
+  )
+
+  ################ More extensive test (#262)
+
+  matched <- fake_matched(
+    id_loan = c("L1", "L2", "L3"),
+    loan_size_outstanding = c(1000, 15000, 1200),
+    name_ald = c("a", "b", "a"),
+    id_2dii = c("DL1", "DL2", "DL1"),
+    sector = "power",
+    sector_ald = "power"
+  )
+
+  ald <- fake_ald(
+    name_company = rep(c("a", "b"), each = 6),
+    sector = "power",
+    technology = rep(
+      c(
+        "coalcap",
+        "gascap",
+        "hydrocap",
+        "nuclearcap",
+        "oilcap",
+        "renewablescap"
+      ),
+      2
+    ),
+    production = c(100, 200, 300, 100, 100, 200, 500, 0, 0, 300, 100, 100),
+    year = 2020
+  )
+
+  scenario <- fake_scenario(
+    sector = "power",
+    technology = c(
+      "coalcap",
+      "gascap",
+      "hydrocap",
+      "nuclearcap",
+      "oilcap",
+      "renewablescap"
+    ),
+    year = 2020,
+    tmsr = 1,
+    smsp = 0
+  )
+
+  out <- target_market_share(
+    matched,
+    ald,
+    scenario,
+    region_isos_stable
+  ) %>%
+    split(.$metric)
+
+  expect_equal(
+    out$projected$technology_share,
+    c(0.4488, 0.0255, 0.0383, 0.2744, 0.1, 0.1128),
+    tolerance = 1e-3
+  )
+
+  expect_equal(
+    out$target_sds$technology_share,
+    c(0.4488, 0.0255, 0.0383, 0.2744, 0.1, 0.1128),
+    tolerance = 1e-3
+  )
+
+  expect_equal(
+    out$corporate_economy$technology_share,
+    c(0.3, 0.1, 0.15, 0.2, 0.1, 0.15),
     tolerance = 1e-3
   )
 })
@@ -605,4 +675,68 @@ test_that("for one company with multiple loans of different size, unweighted
     filter(metric == "projected")
 
   expect_equal(projected$production, fake_ald()$production)
+})
+
+test_that("with bad column errors with informative message (#267)", {
+  bad_matched <- fake_matched(
+    bad_column = "bad"
+  )
+
+  expect_error(
+    class = "invalid_columns",
+    target_market_share(
+      bad_matched,
+      fake_ald(),
+      fake_scenario()
+    )
+  )
+})
+
+test_that("`technology_share` outputs consistently when multiple
+          direct_loantakers match to a single company (#265)", {
+
+  matched <- fake_matched(
+    id_loan = c("L1", "L2", "L3", "L4", "L5"),
+    name_ald = c(rep("company a", 4), "company b")
+  )
+
+  matched_split_dl <- matched %>%
+    mutate(name_direct_loantaker = c("company a1", "company a2", "company a3", "company a4", "company b"))
+
+  ald <- fake_ald(
+    name_company = rep(c("company a","company b"), each = 2),
+    technology = rep(c("ice", "electric"), 2),
+    production = c(8, 2, 15, 5)
+  )
+
+  scenario <- fake_scenario(
+    technology = c("ice", "electric")
+  )
+
+  out <- target_market_share(
+    matched,
+    ald,
+    scenario,
+    region_isos_stable
+  ) %>%
+    filter(
+      metric == "projected",
+      year == 2025,
+      technology == "ice"
+    )
+
+  out_split_dl <- target_market_share(
+    matched_split_dl,
+    ald,
+    scenario,
+    region_isos_stable
+  ) %>%
+    filter(
+      metric == "projected",
+      year == 2025,
+      technology == "ice"
+    )
+
+  expect_equal(out$technology_share, out_split_dl$technology_share)
+
 })
