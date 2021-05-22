@@ -202,10 +202,10 @@ test_that("with known input outputs as expected, at company level", {
   )
 
   scenario <- fake_scenario(
-    technology = c("electric", "ice", "electric", "ice", "electric", "ice", "electric", "ice"),
-    year = c(2020, 2020, 2021, 2021, 2020, 2020, 2021, 2021),
-    tmsr = c(1, 1, 1.85, 0.6, 1, 1, 1.85, 0.6),
-    smsp = c(0, 0, 0.34, -0.2, 0, 0, 0.34, -0.2)
+    technology = c("electric", "ice", "electric", "ice"),
+    year = c(2020, 2020, 2021, 2021),
+    tmsr = c(1, 1, 1.85, 0.6),
+    smsp = c(0, 0, 0.34, -0.2)
   )
 
   out <- target_market_share(
@@ -381,6 +381,29 @@ test_that("warns if `by_company` & `weight_production` are both TRUE (#165)", {
   )
 })
 
+test_that("w/ `by_company = TRUE` outputs additional `name_ald` (#291)", {
+  by_company_false <- target_market_share(
+    data = fake_matched(),
+    ald = fake_ald(),
+    scenario = fake_scenario(),
+    region_isos = region_isos_stable,
+    by_company = FALSE
+  )
+
+  by_company_true <- suppressWarnings(
+    target_market_share(
+      data = fake_matched(),
+      ald = fake_ald(),
+      scenario = fake_scenario(),
+      region_isos = region_isos_stable,
+      by_company = TRUE
+    )
+  )
+
+  additional_column <- setdiff(names(by_company_true), names(by_company_false))
+  expect_equal(additional_column, "name_ald")
+})
+
 test_that("outputs same names regardless of the value of `weight_production` (#186)", {
   out_weighted <- target_market_share(
     fake_matched(),
@@ -442,7 +465,7 @@ test_that("with known input outputs `technology_share` as expected (#184, #262)"
 
   expect_equal(
     out$target_sds$technology_share,
-    c(0.923, 0.076),
+    c(0.914, 0.086),
     tolerance = 1e-3
   )
 
@@ -647,10 +670,10 @@ test_that("w/ multiple match `level`, unweighted production is equal to ALD prod
   )
 
   ald_production <- fake_ald() %>%
-    pull(production)
+    dplyr::pull(production)
 
   out_production <- filter(out, metric == "projected") %>%
-    pull(production)
+    dplyr::pull(production)
 
   expect_equal(ald_production, out_production)
 })
@@ -789,5 +812,127 @@ test_that("`technology_share` outputs consistently when multiple
   expect_equal(
     out_same_level$technology_share,
     out_diff_level$technology_share
+  )
+})
+
+test_that("projects technology share as 'production / total production' when
+          computing by company, unweighted by ralative loan size (#288)", {
+  .production <- c(1, 10)
+  .year <- 2022
+  .company <- "toyota motor corp"
+  .sector <- "automotive"
+  .technology <- c("hybrid", "ice")
+
+  ald <- tibble(
+    production = .production,
+    name_company = .company,
+    technology = .technology,
+    sector = .sector,
+    year = .year,
+    plant_location = c("US"),
+    emission_factor = 1,
+    is_ultimate_owner = TRUE
+  )
+
+  matched <- tibble(
+    sector = .sector,
+    sector_ald = .sector,
+    name_ald = .company,
+    id_loan = "L1",
+    loan_size_outstanding = 1,
+    loan_size_outstanding_currency = "XYZ",
+    loan_size_credit_limit = 1,
+    loan_size_credit_limit_currency = "XYZ",
+    id_2dii = "DL1",
+    level = "direct_loantaker",
+    score = 1
+  )
+
+  scenario <- tibble(
+    sector = .sector,
+    scenario = "cps",
+    technology = .technology,
+    region = "global",
+    year = .year,
+    tmsr = 1,
+    smsp = c(0.100, 0.101),
+    scenario_source = "demo_2020"
+  )
+
+  region <- tibble(
+    region = "global",
+    isos = "us",
+    source = "demo_2020"
+  )
+
+  out <- matched %>%
+    target_market_share(
+      ald = ald,
+      scenario = scenario,
+      region_isos = region,
+      by_company = TRUE,
+      weight_production = FALSE
+    ) %>%
+    filter(metric == "projected")
+
+  expect_equal(
+    out$technology_share,
+    out$production / sum(out$production)
+  )
+
+  expect_equal(
+    out$production,
+    .production
+  )
+})
+
+test_that("Initial value of technology_share consistent between `projected` and
+          `target_*` (#277)", {
+  matched <- fake_matched(
+    id_loan = c("L1", "L2"),
+    name_ald = c("company a", "company b")
+  )
+
+  ald <- fake_ald(
+    name_company = c("company a", "company b", "company a", "company b"),
+    technology = c("ice", "ice", "electric", "electric"),
+    production = c(100, 1, 100, 3),
+    year = 2020
+  )
+
+  scenario <- fake_scenario(
+    technology = c("ice", "electric"),
+    year = 2020,
+    tmsr = 1,
+    smsp = 0
+  )
+
+  out <- target_market_share(
+    matched,
+    ald,
+    scenario,
+    region_isos_stable
+  ) %>%
+    filter(
+      metric %in% c("projected", "target_sds"),
+      year == 2020
+    ) %>%
+    select(technology, metric, technology_share)
+
+  out_ice <- out %>%
+    filter(technology == "ice") %>%
+    split(.$metric)
+
+  out_electric <- out %>%
+    filter(technology == "electric") %>%
+    split(.$metric)
+
+  expect_equal(
+    out_ice$projected$technology_share,
+    out_ice$target_sds$technology_share
+  )
+  expect_equal(
+    out_electric$projected$technology_share,
+    out_electric$target_sds$technology_share
   )
 })
