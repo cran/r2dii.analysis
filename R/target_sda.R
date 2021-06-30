@@ -295,7 +295,7 @@ compute_loanbook_targets <- function(data,
                                      scenario_with_p,
                                      ...) {
   data %>%
-    full_join(scenario_with_p, by = c("year", "sector")) %>%
+    right_join(scenario_with_p, by = c("year", "sector")) %>%
     group_by(...) %>%
     arrange(.data$year) %>%
     mutate(
@@ -323,6 +323,12 @@ pivot_emission_factors_longer <- function(data) {
 }
 
 format_and_combine_output <- function(lbk, corporate_economy, targets, scen, by_company = FALSE) {
+  scenario_sectors <- unique(scen$sector)
+
+  lbk <- filter(lbk, .data$sector %in% scenario_sectors)
+  corporate_economy <- filter(corporate_economy, .data$sector %in% scenario_sectors)
+  targets <- filter(targets, .data$sector %in% scenario_sectors)
+
   projected <- pivot_emission_factors_longer(lbk)
 
   corporate_economy <- pivot_emission_factors_longer(corporate_economy)

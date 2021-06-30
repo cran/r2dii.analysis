@@ -1,7 +1,7 @@
 Package: r2dii.analysis
 Title: Tools to Measure Climate Scenario Alignment of Corporate Lending
         Portfolios
-Version: 0.1.8
+Version: 0.1.9
 Authors@R: 
     c(person(given = "Jackson",
              family = "Hoffart",
@@ -41,11 +41,11 @@ Encoding: UTF-8
 Language: en-US
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2021-05-21 17:29:53 UTC; mauro
+Packaged: 2021-06-29 21:29:52 UTC; mauro
 Author: Jackson Hoffart [aut, cre] (<https://orcid.org/0000-0002-8600-5042>),
   Mauro Lepore [aut, ctr] (<https://orcid.org/0000-0002-1986-7988>),
   Klaus Hogedorn [aut],
   2 Degrees Investing Initiative [cph, fnd]
 Maintainer: Jackson Hoffart <jackson.hoffart@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-05-22 07:10:02 UTC
+Date/Publication: 2021-06-30 08:10:02 UTC

@@ -1,6 +1,12 @@
-# r2dii.analysis 0.1.8
+# r2dii.analysis 0.1.9
 
-# r2dii.analysis 0.1.7
+* `target_sda()` now only outputs `sector` values that are present in the input 
+  `co2_intensity_scenario` data (#308). 
+  
+* `target_sda()` now outputs targets for the range of years in the input 
+  `co2_intenstiy_scenario` (#307). 
+
+# r2dii.analysis 0.1.8
 
 * `target_market_share()` now correctly outputs target `technology share`, in 
   line with methodology (@georgeharris2deg #277).
