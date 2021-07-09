@@ -967,3 +967,179 @@ test_that("Initial value of technology_share consistent between `projected` and
     class = "multiple_currencies"
   )
 })
+
+test_that("Input with only green technologies, outputs only green technologies
+          (#318)", {
+  scenario <- fake_scenario(
+    year = rep(c(2020, 2025), 2),
+    tmsr = c(1, 0.5, 1, 2),
+    smsp = c(0, -0.5, 0, 0.5),
+    technology = rep(c("ice", "electric"), each = 2),
+  )
+
+  ald_green <- fake_ald(
+    technology = "electric"
+  )
+
+  # testing that input with only green techs outputs only green techs
+  out <- target_market_share(
+    fake_matched(),
+    ald_green,
+    scenario,
+    region_isos_stable
+  )
+
+  expect_equal(
+    setdiff(
+      c("electric"),
+      unique(out$technology)
+    ),
+    character(0)
+  )
+})
+
+test_that("technology_share is calculated per region (#315)", {
+  matched <- fake_matched(
+    id_loan = c("L1", "L2"),
+    name_ald = c("green", "brown")
+  )
+
+  ald <- fake_ald(
+    name_company = c("brown", "green"),
+    technology = c("ice", "electric"),
+    plant_location = c("US", "FR"),
+  )
+
+  scenario <- fake_scenario(
+    technology = rep(c("electric", "ice"), 2),
+    region = rep(c("europe", "global"), each = 2),
+    tmsr = 1,
+    smsp = 0,
+    year = 2025
+  )
+
+  out <- target_market_share(
+    matched,
+    ald,
+    scenario,
+    region_isos_stable
+  ) %>%
+    filter(
+      metric != "corporate_economy",
+      region == "global"
+    ) %>%
+    split(.$metric)
+
+  expect_equal(
+    out$projected$technology_share,
+    c(0.5, 0.5)
+  )
+
+  expect_equal(
+    out$target_sds$technology_share,
+    c(0.5, 0.5)
+  )
+})
+
+test_that("Input with only brown technologies, outputs both green  and brown
+          technologies (#318)", {
+  scenario <- fake_scenario(
+    year = rep(c(2020, 2025), 2),
+    tmsr = c(1, 0.5, 1, 2),
+    smsp = c(0, -0.5, 0, 0.5),
+    technology = rep(c("ice", "electric"), each = 2),
+  )
+
+  ald_brown <- fake_ald(
+    technology = "ice"
+  )
+
+  # testing that input with only brown techs outputs both green and brown techs
+  out <- target_market_share(
+    fake_matched(),
+    ald_brown,
+    scenario,
+    region_isos_demo
+  )
+
+  expect_equal(
+    setdiff(
+      c("ice", "electric"),
+      unique(out$technology)
+    ),
+    character(0)
+  )
+})
+
+test_that("Input with unexpected sectors errors gracefully (#329)", {
+  matched <- fake_matched(
+    sector_ald = "a"
+  )
+
+  ald <- fake_ald(
+    sector = "a"
+  )
+
+  scenario <- fake_scenario(
+    sector = "a"
+  )
+
+  expect_warning(
+    target_market_share(
+      matched,
+      ald,
+      scenario,
+      region_isos_stable
+    ),
+    class = "has_zero_rows"
+  )
+})
+
+test_that("`target_market_share` only outputs sectors that are present in the
+          input `data` (#329)", {
+  matched <- fake_matched(
+    sector_ald = "automotive"
+  )
+
+  ald <- fake_ald(
+    sector = c("automotive", "power"),
+    technology = c("ice", "coalcap")
+  )
+
+  scenario <- fake_scenario(
+    sector = c("automotive", "power")
+  )
+
+  out <- target_market_share(
+    matched,
+    ald,
+    scenario,
+    region_isos_stable
+  )
+
+  expect_equal(
+    unique(out$sector),
+    "automotive"
+  )
+})
+
+test_that("`target_market_share` outputs only positive values of `production`(#336)", {
+  ald <- fake_ald(
+    year = c(2025, 2026)
+  )
+
+  scenario <- fake_scenario(
+    technology = rep(c("ice", "electric"), 2),
+    smsp = rep(c(0, -1), each = 2),
+    year = rep(c(2025, 2026), each = 2)
+  )
+
+  out <- target_market_share(
+    fake_matched(),
+    ald,
+    scenario,
+    region_isos_stable
+  )
+
+  expect_false(any(out$production < 0))
+})

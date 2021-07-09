@@ -138,7 +138,13 @@ target_market_share <- function(data,
 
   data <- aggregate_by_loan_id(data)
 
-  data <- join_ald_scenario(data, ald, scenario, region_isos)
+  data <- join_ald_scenario(
+    data,
+    ald,
+    scenario,
+    region_isos,
+    add_green_technologies = TRUE
+  )
 
   crucial_groups <- c(
     "id_loan",
@@ -183,7 +189,8 @@ target_market_share <- function(data,
     arrange(.data$year) %>%
     group_by(!!!rlang::syms(c(target_groups, "technology"))) %>%
     mutate(initial_technology_production = first(.data$technology_production)) %>%
-    select(-.data$technology_production)
+    select(-.data$technology_production) %>%
+    ungroup()
 
   green_or_brown <- r2dii.data::green_or_brown
   tmsr_or_smsp <- tmsr_or_smsp()
@@ -194,6 +201,13 @@ target_market_share <- function(data,
         .data$tmsr,
       smsp_target_production = .data$initial_technology_production +
         (.data$initial_sector_production * .data$smsp)
+    ) %>%
+    mutate(
+      smsp_target_production = ifelse(
+        .data$smsp_target_production < 0,
+        0,
+        .data$smsp_target_production
+      )
     ) %>%
     select(
       -c(
@@ -219,7 +233,12 @@ target_market_share <- function(data,
         green_or_brown = "green_or_brown"
       )
     ) %>%
+    warn_if_has_zero_rows("Joining `r2dii.data::green_or_brown` outputs 0 rows") %>%
     select(-.data$target_name, -.data$green_or_brown)
+
+  if (nrow(data) == 0) {
+    return(empty_target_market_share_output())
+  }
 
   summary_groups <- c(
     "scenario",
@@ -297,10 +316,15 @@ target_market_share <- function(data,
   data <- data %>%
     pivot_wider2()
 
-  ald_with_benchmark <- calculate_ald_benchmark(ald, region_isos, by_company)
+  corporate_economy <- calculate_ald_benchmark(ald, region_isos, by_company)
+
+  relevant_sectors <- unique(data$sector)
+
+  relevant_corporate_economy <- corporate_economy %>%
+    filter(.data$sector %in% relevant_sectors)
 
   data %>%
-    dplyr::bind_rows(ald_with_benchmark) %>%
+    dplyr::bind_rows(relevant_corporate_economy) %>%
     ungroup()
 }
 
