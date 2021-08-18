@@ -6,8 +6,7 @@
 #'
 #' @template ignores-existing-groups
 #'
-#' @param data A "data.frame" like the output of
-#'   [r2dii.match::prioritize()].
+#' @param data A "data.frame" like the output of `r2dii.match::prioritize`.
 #' @param ald An asset level data frame like [r2dii.data::ald_demo].
 #' @param scenario A scenario data frame like [r2dii.data::scenario_demo_2020].
 #' @param region_isos A data frame like [r2dii.data::region_isos] (default).
@@ -31,43 +30,44 @@
 #' @examples
 #' installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
 #'   requireNamespace("r2dii.match", quietly = TRUE)
-#' if (!installed) stop("Please install r2dii.match and r2dii.data")
 #'
-#' library(r2dii.data)
-#' library(r2dii.match)
+#' if (installed) {
+#'   library(r2dii.data)
+#'   library(r2dii.match)
 #'
-#' loanbook <- head(loanbook_demo, 100)
-#' ald <- head(ald_demo, 100)
+#'   loanbook <- head(loanbook_demo, 100)
+#'   ald <- head(ald_demo, 100)
 #'
-#' matched <- loanbook %>%
-#'   match_name(ald) %>%
-#'   prioritize()
+#'   matched <- loanbook %>%
+#'     match_name(ald) %>%
+#'     prioritize()
 #'
-#' # Calculate targets at portfolio level
-#' matched %>%
-#'   target_market_share(
-#'     ald = ald,
-#'     scenario = scenario_demo_2020,
-#'     region_isos = region_isos_demo
-#'   )
+#'   # Calculate targets at portfolio level
+#'   matched %>%
+#'     target_market_share(
+#'       ald = ald,
+#'       scenario = scenario_demo_2020,
+#'       region_isos = region_isos_demo
+#'     )
 #'
-#' # Calculate targets at company level
-#' matched %>%
-#'   target_market_share(
-#'     ald = ald,
-#'     scenario = scenario_demo_2020,
-#'     region_isos = region_isos_demo,
-#'     by_company = TRUE
-#'   )
+#'   # Calculate targets at company level
+#'   matched %>%
+#'     target_market_share(
+#'       ald = ald,
+#'       scenario = scenario_demo_2020,
+#'       region_isos = region_isos_demo,
+#'       by_company = TRUE
+#'     )
 #'
-#' matched %>%
-#'   target_market_share(
-#'     ald = ald,
-#'     scenario = scenario_demo_2020,
-#'     region_isos = region_isos_demo,
-#'     # Calculate unweighted targets
-#'     weight_production = FALSE
-#'   )
+#'   matched %>%
+#'     target_market_share(
+#'       ald = ald,
+#'       scenario = scenario_demo_2020,
+#'       region_isos = region_isos_demo,
+#'       # Calculate unweighted targets
+#'       weight_production = FALSE
+#'     )
+#' }
 target_market_share <- function(data,
                                 ald,
                                 scenario,
@@ -402,8 +402,8 @@ calculate_ald_benchmark <- function(ald, region_isos, by_company) {
       .data$sector, .data$year, .data$region, .data$source
     ) %>%
     mutate(
-      .x = .data$production,
-      technology_share = .data$.x / sum(.data$.x),
+      .x = sum(.data$production),
+      technology_share = ifelse(.data$.x == 0, 0, .data$production / .data$.x),
       .x = NULL,
       metric = "corporate_economy"
     ) %>%
@@ -436,12 +436,20 @@ reweight_technology_share <- function(data, ...) {
   data %>%
     group_by(...) %>%
     mutate(
-      .x = .data$weighted_technology_share,
-      .y = .data$weighted_technology_share_target,
-      weighted_technology_share = .data$.x / sum(.data$.x),
-      weighted_technology_share_target = .data$.y / sum(.data$.y),
+      .x = sum(.data$weighted_technology_share),
+      .y = sum(.data$weighted_technology_share_target),
+      weighted_technology_share = ifelse(
+        .data$.x == 0,
+        0,
+        .data$weighted_technology_share / .data$.x
+      ),
+      weighted_technology_share_target = ifelse(
+        .data$.y == 0,
+        0,
+        .data$weighted_technology_share_target / .data$.y
+      ),
       .x = NULL,
-      .y = NULL
+      .y = NULL,
     ) %>%
     ungroup()
 }
