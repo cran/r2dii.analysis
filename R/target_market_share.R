@@ -7,7 +7,7 @@
 #' @template ignores-existing-groups
 #'
 #' @param data A "data.frame" like the output of `r2dii.match::prioritize`.
-#' @param ald An asset level data frame like [r2dii.data::ald_demo].
+#' @param abcd An asset level data frame like [r2dii.data::abcd_demo].
 #' @param scenario A scenario data frame like [r2dii.data::scenario_demo_2020].
 #' @param region_isos A data frame like [r2dii.data::region_isos] (default).
 #' @param use_credit_limit Logical vector of length 1. `FALSE` defaults to using
@@ -19,33 +19,37 @@
 #' @param weight_production Logical vector of length 1. `TRUE` defaults to
 #' outputting production, weighted by relative loan-size. Set to `FALSE` to
 #' output the unweighted production values.
+#' @param ald `r lifecycle::badge('superseded')` `ald` has been superseded by
+#'   `abcd`.
 #'
-#' @return A tibble including the summarized columns `metric`, `production` and
-#'   `technology_share`. If `by_company = TRUE`, the output will also have the
-#'   column `name_ald`.
+#' @return A tibble including the summarized columns `metric`, `production`,
+#'   `technology_share`, `percentage_of_initial_production_by_scope` and
+#'   `scope`. If `by_company = TRUE`, the output will also have the column
+#'   `name_abcd`.
 #' @export
 #'
 #' @family functions to calculate scenario targets
 #'
 #' @examples
 #' installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
-#'   requireNamespace("r2dii.match", quietly = TRUE)
+#'   requireNamespace("r2dii.match", quietly = TRUE) &&
+#'   packageVersion("r2dii.match") >= "0.1.0"
 #'
 #' if (installed) {
 #'   library(r2dii.data)
 #'   library(r2dii.match)
 #'
 #'   loanbook <- head(loanbook_demo, 100)
-#'   ald <- head(ald_demo, 100)
+#'   abcd <- head(abcd_demo, 100)
 #'
 #'   matched <- loanbook %>%
-#'     match_name(ald) %>%
+#'     match_name(abcd) %>%
 #'     prioritize()
 #'
 #'   # Calculate targets at portfolio level
 #'   matched %>%
 #'     target_market_share(
-#'       ald = ald,
+#'       abcd = abcd,
 #'       scenario = scenario_demo_2020,
 #'       region_isos = region_isos_demo
 #'     )
@@ -53,7 +57,7 @@
 #'   # Calculate targets at company level
 #'   matched %>%
 #'     target_market_share(
-#'       ald = ald,
+#'       abcd = abcd,
 #'       scenario = scenario_demo_2020,
 #'       region_isos = region_isos_demo,
 #'       by_company = TRUE
@@ -61,7 +65,7 @@
 #'
 #'   matched %>%
 #'     target_market_share(
-#'       ald = ald,
+#'       abcd = abcd,
 #'       scenario = scenario_demo_2020,
 #'       region_isos = region_isos_demo,
 #'       # Calculate unweighted targets
@@ -69,15 +73,16 @@
 #'     )
 #' }
 target_market_share <- function(data,
-                                ald,
+                                abcd,
                                 scenario,
                                 region_isos = r2dii.data::region_isos,
                                 use_credit_limit = FALSE,
                                 by_company = FALSE,
-                                weight_production = TRUE) {
+                                weight_production = TRUE,
+                                ald = deprecated()) {
   stopifnot(
     is.data.frame(data),
-    is.data.frame(ald),
+    is.data.frame(abcd),
     is.data.frame(scenario),
     is.data.frame(region_isos),
     is.logical(use_credit_limit),
@@ -85,66 +90,36 @@ target_market_share <- function(data,
     is.logical(weight_production)
   )
 
-  if (by_company & weight_production) {
-    warn(
-      glue(
-        "You've supplied `by_company = TRUE` and `weight_production = TRUE`.
-        This will result in company-level results, weighted by the portfolio
-        loan size, which is rarely useful. Did you mean to set one of these
-        arguments to `FALSE`?"
-      )
+  if (lifecycle::is_present(ald)) {
+    lifecycle::deprecate_warn(
+      "0.2.0 (expected July 2022)",
+      "target_market_share(ald)",
+      "target_market_share(abcd)"
     )
+    abcd <- ald
   }
+
+  data <- rename_and_warn_ald_names(data)
+
+  warn_if_by_company_and_weight_production(by_company, weight_production)
 
   data <- ungroup(warn_grouped(data, "Ungrouping input data."))
 
-  valid_columns <- c(
-    "id_loan",
-    "id_direct_loantaker",
-    "name_direct_loantaker",
-    "id_intermediate_parent_1",
-    "name_intermediate_parent_1",
-    "id_ultimate_parent",
-    "name_ultimate_parent",
-    "loan_size_outstanding",
-    "loan_size_outstanding_currency",
-    "loan_size_credit_limit",
-    "loan_size_credit_limit_currency",
-    "sector_classification_system",
-    "sector_classification_input_type",
-    "sector_classification_direct_loantaker",
-    "fi_type",
-    "flag_project_finance_loan",
-    "name_project",
-    "lei_direct_loantaker",
-    "isin_direct_loantaker",
-    "id_2dii",
-    "level",
-    "sector",
-    "sector_ald",
-    "name",
-    "name_ald",
-    "score",
-    "source",
-    "borderline"
-  )
+  check_input_for_crucial_columns(data, abcd, scenario)
 
-  check_valid_columns(data, valid_columns)
+  data <- aggregate_by_name_abcd(data)
 
-  crucial_scenario <- c("scenario", "tmsr", "smsp")
-  check_crucial_names(scenario, crucial_scenario)
-  check_crucial_names(ald, "is_ultimate_owner")
-  walk_(crucial_scenario, ~ check_no_value_is_missing(scenario, .x))
-
-  data <- aggregate_by_loan_id(data)
-
-  data <- join_ald_scenario(
+  data <- join_abcd_scenario(
     data,
-    ald,
+    abcd,
     scenario,
     region_isos,
     add_green_technologies = TRUE
   )
+
+  if (nrow(data) == 0) {
+    return(empty_target_market_share_output())
+  }
 
   crucial_groups <- c(
     "id_loan",
@@ -152,8 +127,8 @@ target_market_share <- function(data,
     "loan_size_outstanding_currency",
     "loan_size_credit_limit",
     "loan_size_credit_limit_currency",
-    "name_ald",
-    "sector_ald",
+    "name_abcd",
+    "sector_abcd",
     "technology",
     "year",
     "scenario",
@@ -165,76 +140,14 @@ target_market_share <- function(data,
 
   data <- data %>%
     group_by(!!!rlang::syms(crucial_groups)) %>%
-    summarize(
-      production = sum(.data$production)
-    )
+    summarize(production = sum(.data$production))
 
-  if (nrow(data) == 0) {
-    return(empty_target_market_share_output())
-  }
-
-  target_groups <- c("sector_ald", "scenario", "region", "name_ald")
-
-  data <- data %>%
-    group_by(!!!rlang::syms(c(target_groups, "year"))) %>%
-    mutate(sector_production = sum(.data$production)) %>%
-    arrange(.data$year) %>%
-    group_by(!!!rlang::syms(target_groups)) %>%
-    mutate(initial_sector_production = first(.data$sector_production)) %>%
-    select(-.data$sector_production)
-
-  data <- data %>%
-    group_by(!!!rlang::syms(c(target_groups, "technology", "year"))) %>%
-    mutate(technology_production = sum(.data$production)) %>%
-    arrange(.data$year) %>%
-    group_by(!!!rlang::syms(c(target_groups, "technology"))) %>%
-    mutate(initial_technology_production = first(.data$technology_production)) %>%
-    select(-.data$technology_production) %>%
-    ungroup()
+  data <- calculate_targets(data)
 
   green_or_brown <- r2dii.data::green_or_brown
   tmsr_or_smsp <- tmsr_or_smsp()
 
-  data <- data %>%
-    mutate(
-      tmsr_target_production = .data$initial_technology_production *
-        .data$tmsr,
-      smsp_target_production = .data$initial_technology_production +
-        (.data$initial_sector_production * .data$smsp)
-    ) %>%
-    mutate(
-      smsp_target_production = ifelse(
-        .data$smsp_target_production < 0,
-        0,
-        .data$smsp_target_production
-      )
-    ) %>%
-    select(
-      -c(
-        .data$tmsr,
-        .data$smsp,
-        .data$initial_technology_production,
-        .data$initial_sector_production
-      )
-    ) %>%
-    pivot_longer(
-      cols = c(
-        "tmsr_target_production", "smsp_target_production"
-      ),
-      names_to = "target_name",
-      values_to = "production_target"
-    ) %>%
-    left_join(tmsr_or_smsp, by = c(target_name = "which_metric")) %>%
-    inner_join(
-      green_or_brown,
-      by = c(
-        sector_ald = "sector",
-        technology = "technology",
-        green_or_brown = "green_or_brown"
-      )
-    ) %>%
-    warn_if_has_zero_rows("Joining `r2dii.data::green_or_brown` outputs 0 rows") %>%
-    select(-.data$target_name, -.data$green_or_brown)
+  data <- pick_sms_or_tms_target(data, green_or_brown, tmsr_or_smsp)
 
   if (nrow(data) == 0) {
     return(empty_target_market_share_output())
@@ -244,7 +157,7 @@ target_market_share <- function(data,
     "scenario",
     "region",
     "scenario_source",
-    "name_ald"
+    "name_abcd"
   )
 
   if (weight_production) {
@@ -264,7 +177,7 @@ target_market_share <- function(data,
 
   if (!by_company) {
     aggregate_company_groups <- c(
-      "sector_ald",
+      "sector_abcd",
       "technology",
       "year",
       "scenario",
@@ -282,109 +195,122 @@ target_market_share <- function(data,
       )
   }
 
-  reweighting_groups <- maybe_add_name_ald(
-    c("sector_ald", "region", "scenario", "scenario_source", "year"),
-    by_company
+  data <- reweight_technology_share(data, by_company)
+
+  data <- format_output_dataframe(data)
+
+  corporate_economy <- calculate_abcd_benchmark(abcd, region_isos, by_company)
+
+  relevant_corporate_economy <- filter(
+    corporate_economy,
+    .data$sector %in% unique(data$sector),
+    .data$year %in% unique(data$year)
   )
 
-  data <- reweight_technology_share(
-    data,
-    !!!rlang::syms(reweighting_groups)
-  )
-
   data <- data %>%
-    pivot_wider2(
-      names_from = .data$scenario,
-      values_from = c(
-        .data$weighted_production_target,
-        .data$weighted_technology_share_target
-      )
-    )
+    dplyr::bind_rows(relevant_corporate_economy)
 
-  data <- data %>%
-    rename(
-      weighted_production_projected = .data$weighted_production,
-      weighted_technology_share_projected = .data$weighted_technology_share,
-      sector = .data$sector_ald
-    )
-
-  data <- data %>%
-    pivot_longer(cols = starts_with("weighted_")) %>%
-    filter(!is.na(.data$value)) %>%
-    separate_metric_from_name()
-
-  data <- data %>%
-    pivot_wider2()
-
-  corporate_economy <- calculate_ald_benchmark(ald, region_isos, by_company)
-
-  relevant_sectors <- unique(data$sector)
-
-  relevant_corporate_economy <- corporate_economy %>%
-    filter(.data$sector %in% relevant_sectors)
+  data <- add_percentage_of_initial_production_by_scope(data, green_or_brown, tmsr_or_smsp, by_company)
 
   data %>%
-    dplyr::bind_rows(relevant_corporate_economy) %>%
     ungroup()
 }
 
-pivot_wider2 <- function(data, ...) {
-  abort_if_has_list_colums(data)
+add_percentage_of_initial_production_by_scope <- function(data,
+                                                          green_or_brown,
+                                                          tmsr_or_smsp,
+                                                          by_company) {
+  data <- data %>%
+    left_join(green_or_brown, by = c("sector", "technology")) %>%
+    left_join(tmsr_or_smsp, by = "green_or_brown") %>%
+    rename(target_name = .data$which_metric) %>%
+    select(-.data$green_or_brown)
 
-  out <- suppressWarnings(pivot_wider(data, ...))
-  unnest_list_columns(out)
-}
-
-unnest_list_columns <- function(data) {
-  if (utils::packageVersion("tidyr") < "1.1.2") {
-    suppressWarnings(unnest(data))
-  } else {
-    unnest(data, where(is.list))
-  }
-}
-
-tmsr_or_smsp <- function() {
-  dplyr::tribble(
-    ~which_metric, ~green_or_brown,
-    "tmsr_target_production", "brown",
-    "smsp_target_production", "green"
+  percent_by_sector_groups <- add_name_abcd_if_by_company(
+    c("sector", "region", "scenario_source", "metric"),
+    by_company
   )
-}
 
-separate_metric_from_name <- function(data) {
   data %>%
+    group_by(!!!rlang::syms(c(percent_by_sector_groups, "technology"))) %>%
     mutate(
-      name = sub("weighted_", "", .data$name),
-      name = sub("(production)_", "\\1-", .data$name),
-      name = sub("(technology_share)_", "\\1-", .data$name)
+      initial_technology_production = first(.data$production, order_by = .data$year)
     ) %>%
-    tidyr::separate(.data$name, into = c("name", "metric"), sep = "-")
+    group_by(!!!rlang::syms(c(percent_by_sector_groups, "year"))) %>%
+    mutate(sector_production = sum(.data$production)) %>%
+    group_by(!!!rlang::syms(percent_by_sector_groups)) %>%
+    mutate(initial_sector_production = first(.data$sector_production)) %>%
+    ungroup() %>%
+    mutate(
+      percentage_of_initial_technology_production = (.data$production - .data$initial_technology_production) / .data$initial_technology_production,
+      percentage_of_initial_sector_production = (.data$production - .data$initial_technology_production) / .data$initial_sector_production
+    ) %>%
+    mutate(
+      scope = dplyr::case_when(
+        target_name == "tmsr_target_production" ~ "technology",
+        target_name == "smsp_target_production" ~ "sector"
+      ),
+      percentage_of_initial_production_by_scope = dplyr::case_when(
+        scope == "technology" ~ percentage_of_initial_technology_production,
+        scope == "sector" ~ percentage_of_initial_sector_production
+      )
+    ) %>%
+    select(
+      -.data$target_name,
+      -.data$sector_production,
+      -.data$initial_technology_production,
+      -.data$initial_sector_production,
+      -.data$percentage_of_initial_technology_production,
+      -.data$percentage_of_initial_sector_production
+    )
 }
 
-maybe_add_name_ald <- function(data, by_company = FALSE) {
-  out <- data
+calculate_targets <- function(data) {
+  target_groups <- c("sector_abcd", "scenario", "region", "name_abcd")
 
-  if (by_company) {
-    out <- c(data, "name_ald")
-  }
-
-  return(out)
+  data %>%
+    arrange(.data$year) %>%
+    group_by(!!!rlang::syms(c(target_groups, "technology", "year"))) %>%
+    mutate(technology_production = sum(.data$production)) %>%
+    group_by(!!!rlang::syms(c(target_groups, "year"))) %>%
+    mutate(sector_production = sum(.data$production)) %>%
+    group_by(!!!rlang::syms(c(target_groups, "technology"))) %>%
+    mutate(
+      initial_technology_production = first(.data$technology_production),
+      technology_production = NULL
+    ) %>%
+    group_by(!!!rlang::syms(target_groups)) %>%
+    mutate(
+      initial_sector_production = first(.data$sector_production),
+      sector_production = NULL
+    ) %>%
+    ungroup() %>%
+    mutate(
+      tmsr_target_production = .data$initial_technology_production *
+        .data$tmsr,
+      smsp_target_production = .data$initial_technology_production +
+        (.data$initial_sector_production * .data$smsp),
+      tmsr = NULL,
+      initial_technology_production = NULL,
+      initial_sector_production = NULL,
+      smsp = NULL
+    ) %>%
+    mutate(
+      smsp_target_production = ifelse(
+        .data$smsp_target_production < 0,
+        0,
+        .data$smsp_target_production
+      )
+    ) %>%
+    pivot_longer(
+      cols = c("tmsr_target_production", "smsp_target_production"),
+      names_to = "target_name",
+      values_to = "production_target"
+    )
 }
 
-abort_if_has_list_colums <- function(data) {
-  if (has_list_colum(data)) {
-    abort("`data` must have no list column.")
-  }
-
-  invisible(data)
-}
-
-has_list_colum <- function(data) {
-  any(vapply(data, is.list, logical(1)))
-}
-
-calculate_ald_benchmark <- function(ald, region_isos, by_company) {
-  out <- ald %>%
+calculate_abcd_benchmark <- function(abcd, region_isos, by_company) {
+  out <- abcd %>%
     filter(.data$is_ultimate_owner) %>%
     mutate(plant_location = tolower(.data$plant_location)) %>%
     inner_join(
@@ -413,10 +339,41 @@ calculate_ald_benchmark <- function(ald, region_isos, by_company) {
 
   if (by_company) {
     out <- out %>%
-      mutate(name_ald = "corporate_economy")
+      mutate(name_abcd = "corporate_economy")
   }
 
   out
+}
+
+add_name_abcd_if_by_company <- function(list, by_company = FALSE) {
+  if (by_company) {
+    list <- c(list, "name_abcd")
+  }
+
+  list
+}
+
+pick_sms_or_tms_target <- function(data, green_or_brown, tmsr_or_smsp) {
+  data %>%
+    left_join(tmsr_or_smsp, by = c(target_name = "which_metric")) %>%
+    inner_join(
+      green_or_brown,
+      by = c(
+        sector_abcd = "sector",
+        technology = "technology",
+        green_or_brown = "green_or_brown"
+      )
+    ) %>%
+    warn_if_has_zero_rows("Joining `r2dii.data::green_or_brown` outputs 0 rows") %>%
+    select(-.data$target_name, -.data$green_or_brown)
+}
+
+tmsr_or_smsp <- function() {
+  dplyr::tribble(
+    ~which_metric, ~green_or_brown,
+    "tmsr_target_production", "brown",
+    "smsp_target_production", "green"
+  )
 }
 
 empty_target_market_share_output <- function() {
@@ -432,9 +389,168 @@ empty_target_market_share_output <- function() {
   )
 }
 
-reweight_technology_share <- function(data, ...) {
+aggregate_by_name_abcd <- function(data) {
   data %>%
-    group_by(...) %>%
+    group_by(
+      .data$loan_size_outstanding_currency,
+      .data$loan_size_credit_limit_currency,
+      .data$name_abcd,
+      .data$sector_abcd
+    ) %>%
+    summarize(
+      id_loan = first(.data$id_loan),
+      loan_size_outstanding = sum(.data$loan_size_outstanding),
+      loan_size_credit_limit = sum(.data$loan_size_credit_limit)
+    ) %>%
+    ungroup()
+}
+
+format_output_dataframe <- function(data) {
+  data <- data %>%
+    pivot_wider2(
+      names_from = .data$scenario,
+      values_from = c(
+        .data$weighted_production_target,
+        .data$weighted_technology_share_target
+      )
+    )
+
+  data <- data %>%
+    rename(
+      weighted_production_projected = .data$weighted_production,
+      weighted_technology_share_projected = .data$weighted_technology_share,
+      sector = .data$sector_abcd
+    )
+
+  data %>%
+    pivot_longer(cols = starts_with("weighted_")) %>%
+    filter(!is.na(.data$value)) %>%
+    separate_metric_from_name() %>%
+    pivot_wider2()
+}
+
+separate_metric_from_name <- function(data) {
+  data %>%
+    mutate(
+      name = sub("weighted_", "", .data$name),
+      name = sub("(production)_", "\\1-", .data$name),
+      name = sub("(technology_share)_", "\\1-", .data$name)
+    ) %>%
+    tidyr::separate(.data$name, into = c("name", "metric"), sep = "-")
+}
+
+check_input_for_crucial_columns <- function(data, abcd, scenario) {
+  valid_columns <- c(
+    "id_loan",
+    "id_direct_loantaker",
+    "name_direct_loantaker",
+    "id_intermediate_parent_1",
+    "name_intermediate_parent_1",
+    "id_ultimate_parent",
+    "name_ultimate_parent",
+    "loan_size_outstanding",
+    "loan_size_outstanding_currency",
+    "loan_size_credit_limit",
+    "loan_size_credit_limit_currency",
+    "sector_classification_system",
+    "sector_classification_input_type",
+    "sector_classification_direct_loantaker",
+    "fi_type",
+    "flag_project_finance_loan",
+    "name_project",
+    "lei_direct_loantaker",
+    "isin_direct_loantaker",
+    "id_2dii",
+    "level",
+    "sector",
+    "sector_abcd",
+    "name",
+    "name_abcd",
+    "score",
+    "source",
+    "borderline"
+  )
+
+  check_valid_columns(data, valid_columns)
+
+  crucial_all <- c(
+    "sector",
+    "technology",
+    "year"
+  )
+
+  crucial_scenario <- c(
+    crucial_all,
+    "scenario",
+    "region",
+    "tmsr",
+    "smsp",
+    "scenario_source"
+  )
+
+  check_crucial_names(scenario, crucial_scenario)
+
+  crucial_abcd <- c(
+    crucial_all,
+    "name_company",
+    "production",
+    "plant_location",
+    "is_ultimate_owner"
+  )
+
+  check_crucial_names(abcd, crucial_abcd)
+
+  walk_(crucial_scenario, ~ check_no_value_is_missing(scenario, .x))
+}
+
+check_valid_columns <- function(data, valid_columns) {
+  invalid_columns <- setdiff(names(data), valid_columns)
+
+  if (length(invalid_columns) != 0) {
+    abort(
+      glue("Loanbook has unexpected names: `{invalid_columns}`."),
+      class = "invalid_columns"
+    )
+  }
+
+  invisible(data)
+}
+
+pivot_wider2 <- function(data, ...) {
+  abort_if_has_list_colums(data)
+
+  out <- suppressWarnings(pivot_wider(data, ...))
+  unnest_list_columns(out)
+}
+
+unnest_list_columns <- function(data) {
+  if (utils::packageVersion("tidyr") < "1.1.2") {
+    suppressWarnings(unnest(data))
+  } else {
+    unnest(data, where(is.list))
+  }
+}
+
+abort_if_has_list_colums <- function(data) {
+  if (has_list_colum(data)) {
+    abort("`data` must have no list column.")
+  }
+
+  invisible(data)
+}
+
+has_list_colum <- function(data) {
+  any(vapply(data, is.list, logical(1)))
+}
+
+reweight_technology_share <- function(data, by_company) {
+  reweighting_groups <- add_name_abcd_if_by_company(
+    c("sector_abcd", "region", "scenario", "scenario_source", "year"),
+    by_company
+  )
+
+  data %>%
+    group_by(!!!rlang::syms(reweighting_groups)) %>%
     mutate(
       .x = sum(.data$weighted_technology_share),
       .y = sum(.data$weighted_technology_share_target),
@@ -452,33 +568,4 @@ reweight_technology_share <- function(data, ...) {
       .y = NULL,
     ) %>%
     ungroup()
-}
-
-aggregate_by_loan_id <- function(data) {
-  data %>%
-    group_by(
-      .data$loan_size_outstanding_currency,
-      .data$loan_size_credit_limit_currency,
-      .data$name_ald,
-      .data$sector_ald
-    ) %>%
-    summarize(
-      id_loan = first(.data$id_loan),
-      loan_size_outstanding = sum(.data$loan_size_outstanding),
-      loan_size_credit_limit = sum(.data$loan_size_credit_limit)
-    ) %>%
-    ungroup()
-}
-
-check_valid_columns <- function(data, valid_columns) {
-  invalid_columns <- setdiff(names(data), valid_columns)
-
-  if (length(invalid_columns) != 0) {
-    abort(
-      glue("Loanbook has unexpected names: `{invalid_columns}`."),
-      class = "invalid_columns"
-    )
-  }
-
-  invisible(data)
 }

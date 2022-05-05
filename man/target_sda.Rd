@@ -7,17 +7,19 @@ using the SDA approach}
 \usage{
 target_sda(
   data,
-  ald,
+  abcd,
   co2_intensity_scenario,
   use_credit_limit = FALSE,
-  by_company = FALSE
+  by_company = FALSE,
+  region_isos = r2dii.data::region_isos,
+  ald = deprecated()
 )
 }
 \arguments{
 \item{data}{A dataframe like the output of
 \code{r2dii.match::prioritize()}.}
 
-\item{ald}{An asset-level data frame like \link[r2dii.data:ald_demo]{r2dii.data::ald_demo}.}
+\item{abcd}{An asset-level data frame like \link[r2dii.data:abcd_demo]{r2dii.data::abcd_demo}.}
 
 \item{co2_intensity_scenario}{A scenario data frame like
 \link[r2dii.data:co2_intensity_scenario_demo]{r2dii.data::co2_intensity_scenario_demo}.}
@@ -29,13 +31,16 @@ the column \code{loan_size_outstanding}. Set to \code{TRUE} to instead use the c
 \item{by_company}{Logical vector of length 1. \code{FALSE} defaults to outputting
 \code{weighted_production_value} at the portfolio-level. Set to \code{TRUE} to output
 \code{weighted_production_value} at the company-level.}
+
+\item{region_isos}{A data frame like \link[r2dii.data:region_isos]{r2dii.data::region_isos} (default).}
+
+\item{ald}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#superseded}{\figure{lifecycle-superseded.svg}{options: alt='[Superseded]'}}}{\strong{[Superseded]}} \code{ald} has been superseded by
+\code{abcd}.}
 }
 \value{
-A tibble with the CO2 emissions factors attributed to
-the portfolio. These values include the portfolio's actual projected CO2
-emissions factors, the scenario pathway CO2 emissions factors and the SDA
-calculated portfolio target emissions factors (see column
-\code{emission_factor_metric}).
+A tibble including the summarized columns \code{emission_factor_metric} and
+\code{emission_factor_value}. If \code{by_company = TRUE}, the output will also have
+the column \code{name_abcd}.
 }
 \description{
 This function calculates targets of CO2 emissions per unit production at the
@@ -50,45 +55,38 @@ This function ignores existing groups and outputs ungrouped data.
 
 \examples{
 installed <- requireNamespace("r2dii.match", quietly = TRUE) &&
-  requireNamespace("r2dii.data", quietly = TRUE)
+  requireNamespace("r2dii.data", quietly = TRUE) &&
+  packageVersion("r2dii.match") >= "0.1.0"
+
 if (installed) {
   library(r2dii.match)
   library(r2dii.data)
 
-  # Example datasets from r2dii.data
   loanbook <- head(loanbook_demo, 150)
-  ald <- head(ald_demo, 100)
+  abcd <- head(abcd_demo, 100)
 
-  co2_scenario <- co2_intensity_scenario_demo
+  matched <- loanbook \%>\%
+    match_name(abcd) \%>\%
+    prioritize()
 
-  # WARNING: Remember to validate matches (see `?prioritize`)
-  matched <- prioritize(match_name(loanbook, ald))
+  # Calculate targets at portfolio level
+  matched \%>\%
+    target_sda(
+      abcd = abcd,
+      co2_intensity_scenario = co2_intensity_scenario_demo,
+      region_isos = region_isos_demo
+    )
 
-  # You may need to clean your data
-  anyNA(ald$emission_factor)
-  try(target_sda(matched, ald, co2_intensity_scenario = co2_scenario))
-
-  ald2 <- subset(ald, !is.na(emission_factor))
-  anyNA(ald2$emission_factor)
-
-  out <- target_sda(matched, ald2, co2_intensity_scenario = co2_scenario)
-
-  # The output includes the portfolio's actual projected emissions factors, the
-  # scenario pathway emissions factors, and the portfolio's target emissions
-  # factors.
-  out
-
-  # Split-view by metric
-  split(out, out$emission_factor_metric)
-
-  # Calculate company-level targets
-  out <- target_sda(
-    matched, ald2,
-    co2_intensity_scenario = co2_scenario,
-    by_company = TRUE
-  )
-  out
+  # Calculate targets at company level
+  matched \%>\%
+    target_sda(
+      abcd = abcd,
+      co2_intensity_scenario = co2_intensity_scenario_demo,
+      region_isos = region_isos_demo,
+      by_company = TRUE
+    )
 }
+
 }
 \seealso{
 Other functions to calculate scenario targets: 

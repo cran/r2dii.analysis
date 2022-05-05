@@ -11,9 +11,10 @@
 #'
 #' @param data A dataframe like the output of
 #'   `r2dii.match::prioritize()`.
-#' @param ald An asset-level data frame like [r2dii.data::ald_demo].
+#' @param abcd An asset-level data frame like [r2dii.data::abcd_demo].
 #' @param co2_intensity_scenario A scenario data frame like
 #'   [r2dii.data::co2_intensity_scenario_demo].
+#' @param region_isos A data frame like [r2dii.data::region_isos] (default).
 #' @param use_credit_limit Logical vector of length 1. `FALSE` defaults to using
 #'   the column `loan_size_outstanding`. Set to `TRUE` to instead use the column
 #'   `loan_size_credit_limit`.
@@ -21,11 +22,11 @@
 #'   `weighted_production_value` at the portfolio-level. Set to `TRUE` to output
 #'   `weighted_production_value` at the company-level.
 #'
-#' @return  A tibble with the CO2 emissions factors attributed to
-#' the portfolio. These values include the portfolio's actual projected CO2
-#' emissions factors, the scenario pathway CO2 emissions factors and the SDA
-#' calculated portfolio target emissions factors (see column
-#' `emission_factor_metric`).
+#' @return A tibble including the summarized columns `emission_factor_metric` and
+#'   `emission_factor_value`. If `by_company = TRUE`, the output will also have
+#'   the column `name_abcd`.
+#' @param ald `r lifecycle::badge('superseded')` `ald` has been superseded by
+#'   `abcd`.
 #'
 #' @export
 #'
@@ -33,68 +34,74 @@
 #'
 #' @examples
 #' installed <- requireNamespace("r2dii.match", quietly = TRUE) &&
-#'   requireNamespace("r2dii.data", quietly = TRUE)
+#'   requireNamespace("r2dii.data", quietly = TRUE) &&
+#'   packageVersion("r2dii.match") >= "0.1.0"
+#'
 #' if (installed) {
 #'   library(r2dii.match)
 #'   library(r2dii.data)
 #'
-#'   # Example datasets from r2dii.data
 #'   loanbook <- head(loanbook_demo, 150)
-#'   ald <- head(ald_demo, 100)
+#'   abcd <- head(abcd_demo, 100)
 #'
-#'   co2_scenario <- co2_intensity_scenario_demo
+#'   matched <- loanbook %>%
+#'     match_name(abcd) %>%
+#'     prioritize()
 #'
-#'   # WARNING: Remember to validate matches (see `?prioritize`)
-#'   matched <- prioritize(match_name(loanbook, ald))
+#'   # Calculate targets at portfolio level
+#'   matched %>%
+#'     target_sda(
+#'       abcd = abcd,
+#'       co2_intensity_scenario = co2_intensity_scenario_demo,
+#'       region_isos = region_isos_demo
+#'     )
 #'
-#'   # You may need to clean your data
-#'   anyNA(ald$emission_factor)
-#'   try(target_sda(matched, ald, co2_intensity_scenario = co2_scenario))
-#'
-#'   ald2 <- subset(ald, !is.na(emission_factor))
-#'   anyNA(ald2$emission_factor)
-#'
-#'   out <- target_sda(matched, ald2, co2_intensity_scenario = co2_scenario)
-#'
-#'   # The output includes the portfolio's actual projected emissions factors, the
-#'   # scenario pathway emissions factors, and the portfolio's target emissions
-#'   # factors.
-#'   out
-#'
-#'   # Split-view by metric
-#'   split(out, out$emission_factor_metric)
-#'
-#'   # Calculate company-level targets
-#'   out <- target_sda(
-#'     matched, ald2,
-#'     co2_intensity_scenario = co2_scenario,
-#'     by_company = TRUE
-#'   )
-#'   out
+#'   # Calculate targets at company level
+#'   matched %>%
+#'     target_sda(
+#'       abcd = abcd,
+#'       co2_intensity_scenario = co2_intensity_scenario_demo,
+#'       region_isos = region_isos_demo,
+#'       by_company = TRUE
+#'     )
 #' }
+#'
 target_sda <- function(data,
-                       ald,
+                       abcd,
                        co2_intensity_scenario,
                        use_credit_limit = FALSE,
-                       by_company = FALSE) {
+                       by_company = FALSE,
+                       region_isos = r2dii.data::region_isos,
+                       ald = deprecated()) {
   stopifnot(
     is.data.frame(data),
-    is.data.frame(ald),
+    is.data.frame(abcd),
     is.data.frame(co2_intensity_scenario),
     is.logical(use_credit_limit),
     is.logical(by_company)
   )
+
+  if (lifecycle::is_present(ald)) {
+    lifecycle::deprecate_warn(
+      "0.2.0 (expected July 2022)",
+      "target_market_share(ald)",
+      "target_market_share(abcd)"
+    )
+    abcd <- ald
+  }
+
+  data <- rename_and_warn_ald_names(data)
 
   data <- ungroup(warn_grouped(data, "Ungrouping input data."))
 
   crucial_portfolio <- c(
     "loan_size_outstanding",
     "loan_size_credit_limit",
-    "name_ald",
-    "sector_ald"
+    "name_abcd",
+    "sector_abcd"
   )
 
-  crucial_ald <- c(
+  crucial_abcd <- c(
     "name_company",
     "sector",
     "technology",
@@ -113,71 +120,103 @@ target_sda <- function(data,
   check_unique_id(data, "id_loan")
   walk_(crucial_portfolio, ~ check_no_value_is_missing(data, .x))
 
-  check_crucial_names(ald, crucial_ald)
+  check_crucial_names(abcd, crucial_abcd)
+  check_type_emission_factor(abcd)
 
-  if (any(is.na(ald$emission_factor))) {
+  if (any(is.na(abcd$emission_factor))) {
     warn(
-      "Removing ald rows where `emission_factor` is NA",
+      "Removing abcd rows where `emission_factor` is NA",
       class = "na_emission_factor"
     )
 
-    ald <- filter(ald, !is.na(.data$emission_factor))
+    abcd <- filter(abcd, !is.na(.data$emission_factor))
   }
 
-  walk_(crucial_ald, ~ check_no_value_is_missing(ald, .x))
+  walk_(crucial_abcd, ~ check_no_value_is_missing(abcd, .x))
 
   check_crucial_names(co2_intensity_scenario, crucial_scenario)
   walk_(crucial_scenario, ~ check_no_value_is_missing(co2_intensity_scenario, .x))
 
-  ald_by_sector <- ald %>%
+  region_isos <- region_isos %>%
+    filter(source %in% unique(co2_intensity_scenario$scenario_source))
+
+  if (identical(nrow(region_isos), 0L)) {
+    warn("Found no matching regions for input scenario", class = "no_match")
+    return(empty_target_sda_output())
+  }
+
+  abcd <- abcd %>%
+    mutate(plant_location = tolower(.data$plant_location)) %>%
+    left_join(region_isos, by = c(plant_location = "isos")) %>%
+    rename(scenario_source = "source")
+
+  abcd_by_sector <- abcd %>%
     aggregate_excluding(c("technology", "plant_location", "country_of_domicile"))
 
-  data <- inner_join(data, ald_by_sector, by = ald_columns())
+  data <- inner_join(data, abcd_by_sector, by = abcd_columns())
+
+  summary_groups <- c(
+    "region",
+    "scenario_source"
+  )
 
   if (by_company) {
     data <- data %>%
-      summarize_weighted_emission_factor(
-        !!!rlang::syms("name_ald"),
-        use_credit_limit = use_credit_limit
-      )
+      summarize_unweighted_emission_factor(
+        !!!rlang::syms(c(summary_groups, "name_abcd"))
+        )
   } else {
     data <- data %>%
       summarize_weighted_emission_factor(
+        !!!rlang::syms(summary_groups),
         use_credit_limit = use_credit_limit
       )
   }
 
   data <- data %>%
-    rename(sector = .data$sector_ald)
+    rename(sector = .data$sector_abcd)
+
+  relevant_sectors <- data$sector
 
   if (identical(nrow(data), 0L)) {
-    warn("Found no match between loanbook and ald.", class = "no_match")
+    warn("Found no match between loanbook and abcd.", class = "no_match")
     return(empty_target_sda_output())
   }
 
-  corporate_economy <- calculate_market_average(ald_by_sector)
+  relevant_abcd_by_sector <- abcd_by_sector %>%
+    filter(.data$sector %in% unique(relevant_sectors))
 
-  interpolate_groups <- c("scenario", "sector", "region")
+  corporate_economy <- calculate_market_average(relevant_abcd_by_sector)
+
+  interpolate_groups <- c("scenario_source", "scenario", "sector", "region")
+
+  relevant_scenario <- co2_intensity_scenario %>%
+    filter(.data$sector %in% unique(relevant_sectors))
+
+  if (identical(nrow(relevant_scenario), 0L)) {
+    warn("Found no match between loanbook and scenario.", class = "no_match")
+    return(empty_target_sda_output())
+  }
 
   interpolated_scenario <- interpolate_scenario_yearly(
-    co2_intensity_scenario,
+    relevant_scenario,
     !!!rlang::syms(interpolate_groups)
   )
 
-  adjusted_scenario <- compute_ald_adjusted_scenario(
+  adjusted_scenario <- compute_abcd_adjusted_scenario(
     interpolated_scenario,
     corporate_economy
   )
 
   if (identical(nrow(adjusted_scenario), 0L)) {
-    rlang::warn("Found no scenario data for input ald.")
+    rlang::warn("Found no scenario data for input abcd.")
     return(empty_target_sda_output())
   }
 
   adjusted_scenario_with_p <- add_p_to_scenario(adjusted_scenario)
 
-  target_summary_groups <- maybe_add_name_ald(
-    c("sector", "scenario"),
+  target_summary_groups <- maybe_add_name_abcd(
+    c("sector", "scenario", "region", "scenario_source"),
     by_company
   )
 
@@ -201,6 +240,12 @@ target_sda <- function(data,
   )
 }
 
+check_type_emission_factor <- function(abcd) {
+  if (!is.double(abcd$emission_factor)) {
+    abort("The column emission_factor of the asset-level data frame (`abcd`) does not have the type double", class = "crucial_column_wrong_type")
+  }
+}
+
 check_unique_id <- function(data, column) {
   if (sum(duplicated(data[[column]]))) {
     abort(
@@ -212,10 +257,10 @@ check_unique_id <- function(data, column) {
   invisible(data)
 }
 
-aggregate_excluding <- function(ald, columns) {
-  .vars <- setdiff(names(ald), c("production", "emission_factor", columns))
+aggregate_excluding <- function(abcd, columns) {
+  .vars <- setdiff(names(abcd), c("production", "emission_factor", columns))
 
-  ald %>%
+  abcd %>%
     dplyr::group_by_at(.vars = .vars) %>%
     dplyr::filter(.data$production > 0) %>%
     mutate(weight = .data$production / sum(.data$production)) %>%
@@ -227,11 +272,11 @@ aggregate_excluding <- function(ald, columns) {
     ungroup()
 }
 
-maybe_add_name_ald <- function(data, by_company = FALSE) {
+maybe_add_name_abcd <- function(data, by_company = FALSE) {
   out <- data
 
   if (by_company) {
-    out <- c(data, "name_ald")
+    out <- c(data, "name_abcd")
   }
 
   return(out)
@@ -239,33 +284,43 @@ maybe_add_name_ald <- function(data, by_company = FALSE) {
 
 calculate_market_average <- function(data) {
   data %>%
-    group_by(.data$sector, .data$year) %>%
+    group_by(.data$sector, .data$year, .data$region, .data$scenario_source) %>%
     summarize(
       sector_total_production = sum(.data$production),
       # Alias emission_factor_corporate_economy
       .x = list(.data$production * .data$emission_factor)
     ) %>%
     unnest(cols = .data$.x) %>%
-    group_by(.data$sector, .data$year) %>%
+    group_by(.data$sector, .data$year, .data$region, .data$scenario_source) %>%
     summarize(.x = sum(.data$.x / .data$sector_total_production)) %>%
     rename(emission_factor_corporate_economy = .data$.x) %>%
     ungroup()
 }
 
-compute_ald_adjusted_scenario <- function(data, corporate_economy) {
+compute_abcd_adjusted_scenario <- function(data, corporate_economy) {
   corporate_economy_baseline <- corporate_economy %>%
-    group_by(.data$sector) %>%
+    group_by(.data$sector, .data$scenario_source, .data$region) %>%
     filter(.data$year == min(.data$year, na.rm = TRUE)) %>%
     select(
       .data$sector,
+      .data$scenario_source,
+      .data$region,
       baseline_emission_factor = .data$emission_factor_corporate_economy
     ) %>%
     ungroup()
 
   data %>%
     filter(.data$year >= min(corporate_economy$year)) %>%
-    inner_join(corporate_economy_baseline, by = "sector") %>%
-    group_by(.data$scenario, .data$sector) %>%
+    inner_join(
+      corporate_economy_baseline,
+      by = c("sector", "scenario_source", "region")
+    ) %>%
+    group_by(
+      .data$scenario,
+      .data$sector,
+      .data$scenario_source,
+      .data$region
+    ) %>%
     arrange(.data$year) %>%
     mutate(
       baseline_adjustment =
@@ -277,6 +332,8 @@ compute_ald_adjusted_scenario <- function(data, corporate_economy) {
     select(
       .data$scenario,
       .data$sector,
+      .data$scenario_source,
+      .data$region,
       .data$year,
       .data$emission_factor_adjusted_scenario
     )
@@ -286,7 +343,12 @@ add_p_to_scenario <- function(data) {
   p <- function(x) (x - last(x)) / (first(x) - last(x))
 
   data %>%
-    group_by(.data$sector, .data$scenario) %>%
+    group_by(
+      .data$sector,
+      .data$scenario,
+      .data$region,
+      .data$scenario_source
+    ) %>%
     arrange(.data$year) %>%
     mutate(p = p(.data$emission_factor_adjusted_scenario)) %>%
     ungroup()
@@ -296,7 +358,10 @@ compute_loanbook_targets <- function(data,
                                      scenario_with_p,
                                      ...) {
   data %>%
-    right_join(scenario_with_p, by = c("year", "sector")) %>%
+    right_join(
+      scenario_with_p,
+      by = c("year", "sector", "region", "scenario_source")
+    ) %>%
     group_by(...) %>%
     arrange(.data$year) %>%
     mutate(
@@ -349,14 +414,14 @@ format_and_combine_output <- function(lbk, corporate_economy, targets, scen, by_
       values_from = .data$emission_factor_adjusted_scenario
     ) %>%
     pivot_emission_factors_longer() %>%
-    mutate(name_ald = NULL)
+    mutate(name_abcd = NULL)
 
   if (by_company) {
     corporate_economy <- corporate_economy %>%
-      mutate(name_ald = "market")
+      mutate(name_abcd = "market")
 
     scenario <- scenario %>%
-      mutate(name_ald = "market")
+      mutate(name_abcd = "market")
   }
 
   rbind(
@@ -367,8 +432,8 @@ format_and_combine_output <- function(lbk, corporate_economy, targets, scen, by_
   )
 }
 
-ald_columns <- function() {
-  c(name_ald = "name_company", sector_ald = "sector")
+abcd_columns <- function() {
+  c(name_abcd = "name_company", sector_abcd = "sector")
 }
 
 empty_target_sda_output <- function() {
