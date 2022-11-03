@@ -101,6 +101,10 @@ target_market_share <- function(data,
 
   data <- rename_and_warn_ald_names(data)
 
+  abcd <- filter_and_warn_na(abcd, "production")
+
+  region_isos <- change_to_lowercase_and_warn(region_isos, "isos")
+
   warn_if_by_company_and_weight_production(by_company, weight_production)
 
   data <- ungroup(warn_grouped(data, "Ungrouping input data."))
@@ -119,6 +123,14 @@ target_market_share <- function(data,
 
   if (nrow(data) == 0) {
     return(empty_target_market_share_output())
+  }
+
+  if ("production" %in% colnames(scenario)) {
+    warn("The column `production` has been removed from the dataset `scenario`.
+         The columns `tmsr` and `smsp` will be used instead",
+         class = "scenario_production_column_removed")
+    scenario <- dplyr::select(scenario, -all_of("production"))
+    return(scenario)
   }
 
   crucial_groups <- c(
@@ -223,8 +235,8 @@ add_percentage_of_initial_production_by_scope <- function(data,
   data <- data %>%
     left_join(green_or_brown, by = c("sector", "technology")) %>%
     left_join(tmsr_or_smsp, by = "green_or_brown") %>%
-    rename(target_name = .data$which_metric) %>%
-    select(-.data$green_or_brown)
+    rename(target_name = "which_metric") %>%
+    select(-all_of("green_or_brown"))
 
   percent_by_sector_groups <- add_name_abcd_if_by_company(
     c("sector", "region", "scenario_source", "metric"),
@@ -256,12 +268,16 @@ add_percentage_of_initial_production_by_scope <- function(data,
       )
     ) %>%
     select(
-      -.data$target_name,
-      -.data$sector_production,
-      -.data$initial_technology_production,
-      -.data$initial_sector_production,
-      -.data$percentage_of_initial_technology_production,
-      -.data$percentage_of_initial_sector_production
+      -all_of(
+        c(
+          "target_name",
+          "sector_production",
+          "initial_technology_production",
+          "initial_sector_production",
+          "percentage_of_initial_technology_production",
+          "percentage_of_initial_sector_production"
+        )
+      )
     )
 }
 
@@ -365,7 +381,7 @@ pick_sms_or_tms_target <- function(data, green_or_brown, tmsr_or_smsp) {
       )
     ) %>%
     warn_if_has_zero_rows("Joining `r2dii.data::green_or_brown` outputs 0 rows") %>%
-    select(-.data$target_name, -.data$green_or_brown)
+    select(-all_of(c("target_name", "green_or_brown")))
 }
 
 tmsr_or_smsp <- function() {
@@ -408,18 +424,18 @@ aggregate_by_name_abcd <- function(data) {
 format_output_dataframe <- function(data) {
   data <- data %>%
     pivot_wider2(
-      names_from = .data$scenario,
+      names_from = "scenario",
       values_from = c(
-        .data$weighted_production_target,
-        .data$weighted_technology_share_target
+        "weighted_production_target",
+        "weighted_technology_share_target"
       )
     )
 
   data <- data %>%
     rename(
-      weighted_production_projected = .data$weighted_production,
-      weighted_technology_share_projected = .data$weighted_technology_share,
-      sector = .data$sector_abcd
+      weighted_production_projected = "weighted_production",
+      weighted_technology_share_projected = "weighted_technology_share",
+      sector = "sector_abcd"
     )
 
   data %>%

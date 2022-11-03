@@ -9,6 +9,20 @@ check_no_value_is_missing <- function(data, column) {
   invisible(data)
 }
 
+filter_and_warn_na <- function(data, column) {
+  if (anyNA(data[[column]])) {
+    name_dataset <- deparse(substitute(data))
+    warning_message = paste("Removing rows in", name_dataset, "where `{column}` is NA")
+    warn(
+      glue(warning_message),
+      class = "na_crucial_economic_input"
+    )
+
+    data <- filter(data, !is.na(.data[[column]]))
+  }
+  return(data)
+}
+
 warn_grouped <- function(data, message) {
   if (dplyr::is_grouped_df(data)) warn(message)
 
@@ -64,7 +78,7 @@ rename_and_warn_ald_names <- function(data) {
       )
     )
 
-    data <- dplyr::rename(data, name_abcd = .data$name_ald)
+    data <- dplyr::rename(data, name_abcd = "name_ald")
   }
 
   if (all(c("sector_ald", "sector_abcd") %in% names(data))) {
@@ -87,9 +101,24 @@ rename_and_warn_ald_names <- function(data) {
       )
     )
 
-    data <- dplyr::rename(data, sector_abcd = .data$sector_ald)
+    data <- dplyr::rename(data, sector_abcd = "sector_ald")
   }
 
   data
+
+}
+
+change_to_lowercase_and_warn <- function(data, column) {
+  if(any(data[[column]] != tolower(data[[column]]), na.rm = TRUE)) {
+    name_dataset <- deparse(substitute(data))
+    warning_message = paste("The column `{column}` of", name_dataset, "has been updated to only contain lower-cases.")
+    warn(
+      glue(warning_message),
+      class = "column_not_in_lowercase"
+    )
+    data[[column]] <- tolower(data[[column]])
+  }
+
+  return(data)
 
 }

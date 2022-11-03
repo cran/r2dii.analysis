@@ -161,13 +161,26 @@ test_that("w/ NAs in crucial columns, errors with informative message", {
   expect_error_crucial_NAs_portfolio("name_abcd")
   expect_error_crucial_NAs_portfolio("sector_abcd")
 
-  expect_error_crucial_NAs_abcd("production")
   expect_error_crucial_NAs_abcd("sector")
   expect_error_crucial_NAs_abcd("year")
 
   expect_error_crucial_NAs_scenario("scenario")
   expect_error_crucial_NAs_scenario("tmsr")
   expect_error_crucial_NAs_scenario("smsp")
+})
+
+test_that("filters and warns when input-data has NAs", {
+  matched <- fake_matched()
+  abcd <- fake_abcd(production = c(1, NA))
+  scenario <- fake_scenario()
+
+  expect_warning(
+    target_market_share(
+      matched,
+      abcd,
+      scenario,
+      region_isos_stable),
+      class = "na_crucial_economic_input")
 })
 
 test_that("outputs expected names", {
@@ -1366,5 +1379,34 @@ test_that("w/ abcd with older years than scenarios, outputs 0 percent change in
   expect_equal(
     initial_out$target_sds$percentage_of_initial_production_by_scope,
     0L
+  )
+})
+
+test_that("production column in scenario dataset is removed with a warning #372", {
+  bad_scenario <- fake_scenario(production = 1)
+
+  expect_warning(
+    class = "scenario_production_column_removed",
+    target_market_share(
+      fake_matched(),
+      fake_abcd(),
+      bad_scenario,
+      region_isos_stable
+    )
+  )
+})
+
+test_that("region_isos only has lowercase isos #398", {
+
+  bad_region_isos <- mutate(region_isos_demo, isos = toupper(isos))
+
+  expect_warning(
+    class = "column_not_in_lowercase",
+    target_market_share(
+      fake_matched(),
+      fake_abcd(),
+      fake_scenario(),
+      bad_region_isos
+    )
   )
 })
