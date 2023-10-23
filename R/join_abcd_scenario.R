@@ -61,8 +61,8 @@ join_abcd_scenario <- function(data,
   }
 
   out <- data %>%
-    left_join(abcd, by = abcd_columns()) %>%
-    inner_join(scenario, by = scenario_columns()) %>%
+    left_join(abcd, by = abcd_columns(), relationship = "many-to-many") %>%
+    inner_join(scenario, by = scenario_columns(), relationship = "many-to-many") %>%
     warn_if_has_zero_rows("Joining `scenario` outputs 0 rows.") %>%
     mutate(plant_location = tolower(.data$plant_location)) %>%
     inner_join(
@@ -101,14 +101,14 @@ check_portfolio_abcd_scenario <- function(valid_matches, abcd, scenario) {
 }
 
 add_green_technologies_to_abcd <- function(data, scenario) {
-  green_techs <- r2dii.data::green_or_brown %>%
-    filter(.data$green_or_brown == "green") %>%
-    select(-all_of("green_or_brown"))
+  increasing_techs <- r2dii.data::increasing_or_decreasing %>%
+    filter(.data$increasing_or_decreasing == "increasing") %>%
+    select(-all_of("increasing_or_decreasing"))
 
-  green_techs_in_scenario <- scenario %>%
+  increasing_techs_in_scenario <- scenario %>%
     select(all_of(c("sector", "technology"))) %>%
     unique() %>%
-    inner_join(green_techs, by = c("sector", "technology"))
+    inner_join(increasing_techs, by = c("sector", "technology"))
 
   green_rows_to_add <- data %>%
     group_by(
@@ -119,7 +119,11 @@ add_green_technologies_to_abcd <- function(data, scenario) {
       .data$is_ultimate_owner
     ) %>%
     summarize() %>%
-    left_join(green_techs_in_scenario, by = "sector") %>%
+    left_join(
+      increasing_techs_in_scenario,
+      by = "sector",
+      relationship = "many-to-many"
+      ) %>%
     mutate(production = 0)
 
   dplyr::bind_rows(data, green_rows_to_add)

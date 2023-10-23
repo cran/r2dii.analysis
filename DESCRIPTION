@@ -1,10 +1,15 @@
 Package: r2dii.analysis
 Title: Measure Climate Scenario Alignment of Corporate Loans
-Version: 0.2.1
+Version: 0.3.0
 Authors@R: 
-    c(person(given = "Jackson",
-             family = "Hoffart",
+    c(person(given = "Alex",
+             family = "Axthelm",
              role = c("aut", "cre"),
+             email = "aaxthelm@rmi.org",
+             comment = c(ORCID = "0000-0001-8579-8565")),
+      person(given = "Jackson",
+             family = "Hoffart",
+             role = c("aut", "ctr"),
              email = "jackson.hoffart@gmail.com",
              comment = c(ORCID = "0000-0002-8600-5042")),
       person(given = "Mauro",
@@ -16,6 +21,10 @@ Authors@R:
              family = "Hogedorn",
              role = "aut",
              email = "klaus@2degrees-investing.org"),
+      person(given = "Nicky",
+             family = "Halterman",
+             role = "aut",
+             email = "nicholas.i.halterman@gmail.com"),
       person(given = "Rocky Mountain Institute",
              role = c("cph", "fnd"),
              email = "PACTA4banks@rmi.org"))
@@ -33,20 +42,22 @@ URL: https://github.com/RMI-PACTA/r2dii.analysis,
         https://rmi-pacta.github.io/r2dii.analysis/
 BugReports: https://github.com/RMI-PACTA/r2dii.analysis/issues
 Depends: R (>= 3.4)
-Imports: dplyr (>= 0.8.5), glue, lifecycle, magrittr, r2dii.data, rlang
-        (>= 0.1.2), tidyr, tidyselect, zoo
+Imports: dplyr (>= 0.8.5), glue, lifecycle, magrittr, r2dii.data (>=
+        0.4.0), rlang (>= 0.1.2), tidyr, tidyselect, zoo
 Suggests: covr, r2dii.match, rmarkdown, roxygen2, spelling, testthat
         (>= 3.0.0), withr
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2022-11-03 16:10:05 UTC; jdhoffa
-Author: Jackson Hoffart [aut, cre] (<https://orcid.org/0000-0002-8600-5042>),
+Packaged: 2023-10-23 14:54:53 UTC; aaxthelm
+Author: Alex Axthelm [aut, cre] (<https://orcid.org/0000-0001-8579-8565>),
+  Jackson Hoffart [aut, ctr] (<https://orcid.org/0000-0002-8600-5042>),
   Mauro Lepore [aut, ctr] (<https://orcid.org/0000-0002-1986-7988>),
   Klaus Hogedorn [aut],
+  Nicky Halterman [aut],
   Rocky Mountain Institute [cph, fnd]
-Maintainer: Jackson Hoffart <jackson.hoffart@gmail.com>
+Maintainer: Alex Axthelm <aaxthelm@rmi.org>
 Repository: CRAN
-Date/Publication: 2022-11-03 16:50:02 UTC
+Date/Publication: 2023-10-23 15:50:13 UTC

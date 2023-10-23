@@ -33,6 +33,7 @@
 #' @family functions to calculate scenario targets
 #'
 #' @examples
+#' \dontrun{
 #' installed <- requireNamespace("r2dii.match", quietly = TRUE) &&
 #'   requireNamespace("r2dii.data", quietly = TRUE) &&
 #'   packageVersion("r2dii.match") >= "0.1.0"
@@ -65,7 +66,7 @@
 #'       by_company = TRUE
 #'     )
 #' }
-#'
+#' }
 target_sda <- function(data,
                        abcd,
                        co2_intensity_scenario,
@@ -143,13 +144,22 @@ target_sda <- function(data,
 
   abcd <- abcd %>%
     mutate(plant_location = tolower(.data$plant_location)) %>%
-    left_join(region_isos, by = c(plant_location = "isos")) %>%
+    left_join(
+      region_isos,
+      by = c(plant_location = "isos"),
+      relationship = "many-to-many"
+      ) %>%
     rename(scenario_source = "source")
 
   abcd_by_sector <- abcd %>%
     aggregate_excluding(c("technology", "plant_location", "country_of_domicile"))
 
-  data <- inner_join(data, abcd_by_sector, by = abcd_columns())
+  data <- inner_join(
+    data,
+    abcd_by_sector,
+    by = abcd_columns(),
+    relationship = "many-to-many"
+    )
 
   summary_groups <- c(
     "region",
@@ -211,15 +221,13 @@ target_sda <- function(data,
 
   adjusted_scenario_with_p <- add_p_to_scenario(adjusted_scenario)
 
-  target_summary_groups <- maybe_add_name_abcd(
-    c("sector", "scenario", "region", "scenario_source"),
-    by_company
-  )
+  target_summary_groups <- c("sector", "scenario", "region", "scenario_source")
 
   loanbook_targets <- compute_loanbook_targets(
     data,
     adjusted_scenario_with_p,
-    !!!rlang::syms(target_summary_groups)
+    by_company = by_company,
+    target_summary_groups
   )
 
   if (identical(nrow(loanbook_targets), 0L)) {
@@ -361,22 +369,42 @@ add_p_to_scenario <- function(data) {
 
 compute_loanbook_targets <- function(data,
                                      scenario_with_p,
+                                     by_company,
                                      ...) {
-  data %>%
+  target_summary_groups <- maybe_add_name_abcd(..., by_company)
+
+  data <- data %>%
     right_join(
       scenario_with_p,
       by = c("year", "sector", "region", "scenario_source")
-    ) %>%
-    group_by(...) %>%
+    )
+
+  if (by_company) {
+    data <- data %>%
+      group_by(!!!rlang::syms(...)) %>%
+      arrange(.data$year) %>%
+      tidyr::complete(.data$name_abcd, .data$year) %>%
+      ungroup() %>%
+      select(-all_of(c("emission_factor_adjusted_scenario", "p"))) %>%
+      right_join(
+        scenario_with_p,
+        by = c("year", "sector", "region", "scenario_source", "scenario")
+      ) %>%
+      dplyr::filter(!is.na(.data$name_abcd))
+  }
+
+  data <- data  %>%
+    group_by(!!!rlang::syms(target_summary_groups)) %>%
     arrange(.data$year) %>%
     mutate(
-      d = first(.data$emission_factor_projected) -
-        last(.data$emission_factor_adjusted_scenario),
-      emission_factor_target = (.data$d * .data$p) +
-        last(.data$emission_factor_adjusted_scenario)
+      d = first(.data$emission_factor_projected) - last(.data$emission_factor_adjusted_scenario),
+      emission_factor_target = (.data$d * .data$p) + last(.data$emission_factor_adjusted_scenario)
     ) %>%
     ungroup() %>%
-    select(..., all_of(c("year", "emission_factor_target")))
+    select(all_of(target_summary_groups), all_of(c("year", "emission_factor_target")))
+
+  data
+
 }
 
 pivot_emission_factors_longer <- function(data) {

@@ -12,6 +12,7 @@ target_market_share(
   use_credit_limit = FALSE,
   by_company = FALSE,
   weight_production = TRUE,
+  increasing_or_decreasing = r2dii.data::increasing_or_decreasing,
   ald = deprecated()
 )
 }
@@ -36,6 +37,9 @@ the column \code{loan_size_outstanding}. Set to \code{TRUE} to use the column
 outputting production, weighted by relative loan-size. Set to \code{FALSE} to
 output the unweighted production values.}
 
+\item{increasing_or_decreasing}{A data frame like
+\link[r2dii.data:increasing_or_decreasing]{r2dii.data::increasing_or_decreasing}.}
+
 \item{ald}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#superseded}{\figure{lifecycle-superseded.svg}{options: alt='[Superseded]'}}}{\strong{[Superseded]}} \code{ald} has been superseded by
 \code{abcd}.}
 }
@@ -56,6 +60,7 @@ This function ignores existing groups and outputs ungrouped data.
 }
 
 \examples{
+\dontrun{
 installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
   requireNamespace("r2dii.match", quietly = TRUE) &&
   packageVersion("r2dii.match") >= "0.1.0"
@@ -96,6 +101,7 @@ if (installed) {
       # Calculate unweighted targets
       weight_production = FALSE
     )
+}
 }
 }
 \seealso{

@@ -27,6 +27,7 @@
 #'   `summarize_weighted_percent_change()`, respectively.
 #'
 #' @examples
+#' \dontrun{
 #' installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
 #'   requireNamespace("r2dii.match", quietly = TRUE) &&
 #'   packageVersion("r2dii.match") >= "0.1.0"
@@ -44,7 +45,8 @@
 #'       abcd = abcd,
 #'       scenario = scenario_demo_2020,
 #'       region_isos = region_isos_demo
-#'     )
+#'     ) %>%
+#'     dplyr::filter(production != 0)
 #'
 #'   summarize_weighted_production(master)
 #'
@@ -53,6 +55,7 @@
 #'   summarize_weighted_percent_change(master)
 #'
 #'   summarize_weighted_percent_change(master, use_credit_limit = TRUE)
+#' }
 #' }
 summarize_weighted_production <- function(data, ..., use_credit_limit = FALSE) {
   summarize_weighted_production_(data, ..., use_credit_limit = use_credit_limit, with_targets = FALSE)
@@ -254,10 +257,10 @@ add_percent_change <- function(data) {
 
   check_zero_initial_production(data)
 
-  green_or_brown <- r2dii.data::green_or_brown
+  increasing_or_decreasing <- r2dii.data::increasing_or_decreasing
 
   data %>%
-    inner_join(green_or_brown, by = c(
+    inner_join(increasing_or_decreasing, by = c(
       sector_abcd = "sector",
       technology = "technology"
     )) %>%
@@ -266,15 +269,15 @@ add_percent_change <- function(data) {
     group_by(.data$sector_abcd, .data$name_abcd) %>%
     arrange(.data$name_abcd, .data$year) %>%
     mutate(
-      brown_percent_change =
+      decreasing_percent_change =
         (.data$production - first(.data$production)) /
           first(.data$production) * 100,
-      green_percent_change = (.data$production - first(.data$production)) /
+      increasing_percent_change = (.data$production - first(.data$production)) /
         first(.data$sector_production) * 100
     ) %>%
     mutate(percent_change = dplyr::case_when(
-      green_or_brown == "green" ~ green_percent_change,
-      green_or_brown == "brown" ~ brown_percent_change
+      increasing_or_decreasing == "increasing" ~ increasing_percent_change,
+      increasing_or_decreasing == "decreasing" ~ decreasing_percent_change
     )) %>%
     select(one_of(c(names(data), "percent_change"))) %>%
     ungroup()

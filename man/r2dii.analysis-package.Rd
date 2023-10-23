@@ -20,12 +20,14 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Jackson Hoffart \email{jackson.hoffart@gmail.com} (\href{https://orcid.org/0000-0002-8600-5042}{ORCID})
+\strong{Maintainer}: Alex Axthelm \email{aaxthelm@rmi.org} (\href{https://orcid.org/0000-0001-8579-8565}{ORCID})
 
 Authors:
 \itemize{
+  \item Jackson Hoffart \email{jackson.hoffart@gmail.com} (\href{https://orcid.org/0000-0002-8600-5042}{ORCID}) [contractor]
   \item Mauro Lepore \email{maurolepore@gmail.com} (\href{https://orcid.org/0000-0002-1986-7988}{ORCID}) [contractor]
   \item Klaus Hogedorn \email{klaus@2degrees-investing.org}
+  \item Nicky Halterman \email{nicholas.i.halterman@gmail.com}
 }
 
 Other contributors:
