@@ -21,8 +21,6 @@
 #' output the unweighted production values.
 #' @param increasing_or_decreasing A data frame like
 #' [r2dii.data::increasing_or_decreasing].
-#' @param ald `r lifecycle::badge('superseded')` `ald` has been superseded by
-#'   `abcd`.
 #'
 #' @return A tibble including the summarized columns `metric`, `production`,
 #'   `technology_share`, `percentage_of_initial_production_by_scope` and
@@ -32,50 +30,43 @@
 #'
 #' @family functions to calculate scenario targets
 #'
-#' @examples
-#' \dontrun{
-#' installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
-#'   requireNamespace("r2dii.match", quietly = TRUE) &&
-#'   packageVersion("r2dii.match") >= "0.1.0"
+#' @examplesIf rlang::is_installed("r2dii.data") && rlang::is_installed("r2dii.match", version = "0.1.0")
 #'
-#' if (installed) {
-#'   library(r2dii.data)
-#'   library(r2dii.match)
+#' library(r2dii.data)
+#' library(r2dii.match)
 #'
-#'   loanbook <- head(loanbook_demo, 100)
-#'   abcd <- head(abcd_demo, 100)
+#' loanbook <- head(loanbook_demo, 100)
+#' abcd <- head(abcd_demo, 100)
 #'
-#'   matched <- loanbook %>%
-#'     match_name(abcd) %>%
-#'     prioritize()
+#' matched <- loanbook %>%
+#'   match_name(abcd) %>%
+#'   prioritize()
 #'
-#'   # Calculate targets at portfolio level
-#'   matched %>%
-#'     target_market_share(
-#'       abcd = abcd,
-#'       scenario = scenario_demo_2020,
-#'       region_isos = region_isos_demo
+#' # Calculate targets at portfolio level
+#' matched %>%
+#'   target_market_share(
+#'     abcd = abcd,
+#'     scenario = scenario_demo_2020,
+#'     region_isos = region_isos_demo
 #'     )
 #'
-#'   # Calculate targets at company level
-#'   matched %>%
-#'     target_market_share(
-#'       abcd = abcd,
-#'       scenario = scenario_demo_2020,
-#'       region_isos = region_isos_demo,
-#'       by_company = TRUE
-#'     )
+#' # Calculate targets at company level
+#' matched %>%
+#'   target_market_share(
+#'   abcd = abcd,
+#'   scenario = scenario_demo_2020,
+#'   region_isos = region_isos_demo,
+#'   by_company = TRUE
+#'   )
 #'
-#'   matched %>%
-#'     target_market_share(
-#'       abcd = abcd,
-#'       scenario = scenario_demo_2020,
-#'       region_isos = region_isos_demo,
-#'       # Calculate unweighted targets
-#'       weight_production = FALSE
+#' matched %>%
+#'   target_market_share(
+#'     abcd = abcd,
+#'     scenario = scenario_demo_2020,
+#'     region_isos = region_isos_demo,
+#'     # Calculate unweighted targets
+#'     weight_production = FALSE
 #'     )
-#' }
-#' }
 target_market_share <- function(data,
                                 abcd,
                                 scenario,
@@ -83,8 +74,7 @@ target_market_share <- function(data,
                                 use_credit_limit = FALSE,
                                 by_company = FALSE,
                                 weight_production = TRUE,
-                                increasing_or_decreasing = r2dii.data::increasing_or_decreasing,
-                                ald = deprecated()) {
+                                increasing_or_decreasing = r2dii.data::increasing_or_decreasing) {
   stopifnot(
     is.data.frame(data),
     is.data.frame(abcd),
@@ -95,19 +85,6 @@ target_market_share <- function(data,
     is.logical(weight_production)
   )
 
-  if (lifecycle::is_present(ald)) {
-    lifecycle::deprecate_warn(
-      "0.2.0 (expected July 2022)",
-      "target_market_share(ald)",
-      "target_market_share(abcd)"
-    )
-    abcd <- ald
-  }
-
-  data <- rename_and_warn_ald_names(data)
-
-  abcd <- filter_and_warn_na(abcd, "production")
-
   region_isos <- change_to_lowercase_and_warn(region_isos, "isos")
 
   warn_if_by_company_and_weight_production(by_company, weight_production)
@@ -116,7 +93,22 @@ target_market_share <- function(data,
 
   check_input_for_crucial_columns(data, abcd, scenario)
 
+  abcd <- fill_and_warn_na(abcd, "production")
+  abcd <- dplyr::summarize(
+    abcd,
+    production = sum(.data[["production"]]),
+    .by = -"production"
+  )
+
   data <- aggregate_by_name_abcd(data)
+
+  if ("production" %in% colnames(scenario)) {
+    warn("The column `production` has been removed from the dataset `scenario`.
+         The columns `tmsr` and `smsp` will be used instead",
+         class = "scenario_production_column_removed")
+    scenario <- dplyr::select(scenario, -all_of("production"))
+    return(scenario)
+  }
 
   data <- join_abcd_scenario(
     data,
@@ -128,14 +120,6 @@ target_market_share <- function(data,
 
   if (nrow(data) == 0) {
     return(empty_target_market_share_output())
-  }
-
-  if ("production" %in% colnames(scenario)) {
-    warn("The column `production` has been removed from the dataset `scenario`.
-         The columns `tmsr` and `smsp` will be used instead",
-         class = "scenario_production_column_removed")
-    scenario <- dplyr::select(scenario, -all_of("production"))
-    return(scenario)
   }
 
   crucial_groups <- c(
@@ -457,7 +441,12 @@ separate_metric_from_name <- function(data) {
       name = sub("(production)_", "\\1-", .data$name),
       name = sub("(technology_share)_", "\\1-", .data$name)
     ) %>%
-    tidyr::separate(.data$name, into = c("name", "metric"), sep = "-")
+    tidyr::separate(
+      .data$name,
+      into = c("name", "metric"),
+      sep = "-",
+      extra = "merge"
+      )
 }
 
 check_input_for_crucial_columns <- function(data, abcd, scenario) {

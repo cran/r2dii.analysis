@@ -37,36 +37,30 @@ companies would cause percent-change percentage to be infinite, which is wrong.
 }
 
 \examples{
-\dontrun{
-installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
-  requireNamespace("r2dii.match", quietly = TRUE) &&
-  packageVersion("r2dii.match") >= "0.1.0"
+\dontshow{if (rlang::is_installed("r2dii.data") && rlang::is_installed("r2dii.match", version = "0.1.0")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+library(r2dii.data)
+library(r2dii.match)
 
-if (installed) {
-  library(r2dii.data)
-  library(r2dii.match)
-
-  loanbook <- head(loanbook_demo, 150)
-  abcd <- head(abcd_demo, 100)
-  master <- loanbook \%>\%
-    match_name(abcd) \%>\%
-    prioritize() \%>\%
-    join_abcd_scenario(
-      abcd = abcd,
-      scenario = scenario_demo_2020,
-      region_isos = region_isos_demo
+loanbook <- head(loanbook_demo, 150)
+abcd <- head(abcd_demo, 100)
+master <- loanbook \%>\%
+  match_name(abcd) \%>\%
+  prioritize() \%>\%
+  join_abcd_scenario(
+    abcd = abcd,
+    scenario = scenario_demo_2020,
+    region_isos = region_isos_demo
     ) \%>\%
-    dplyr::filter(production != 0)
+  dplyr::filter(production != 0)
 
-  summarize_weighted_production(master)
+summarize_weighted_production(master)
 
-  summarize_weighted_production(master, use_credit_limit = TRUE)
+summarize_weighted_production(master, use_credit_limit = TRUE)
 
-  summarize_weighted_percent_change(master)
+summarize_weighted_percent_change(master)
 
-  summarize_weighted_percent_change(master, use_credit_limit = TRUE)
-}
-}
+summarize_weighted_percent_change(master, use_credit_limit = TRUE)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=join_abcd_scenario]{join_abcd_scenario()}}.

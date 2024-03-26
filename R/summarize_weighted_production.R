@@ -26,37 +26,29 @@
 #'   `weighted_production` for `summarize_weighted_production()` and
 #'   `summarize_weighted_percent_change()`, respectively.
 #'
-#' @examples
-#' \dontrun{
-#' installed <- requireNamespace("r2dii.data", quietly = TRUE) &&
-#'   requireNamespace("r2dii.match", quietly = TRUE) &&
-#'   packageVersion("r2dii.match") >= "0.1.0"
+#' @examplesIf rlang::is_installed("r2dii.data") && rlang::is_installed("r2dii.match", version = "0.1.0")
+#' library(r2dii.data)
+#' library(r2dii.match)
 #'
-#' if (installed) {
-#'   library(r2dii.data)
-#'   library(r2dii.match)
-#'
-#'   loanbook <- head(loanbook_demo, 150)
-#'   abcd <- head(abcd_demo, 100)
-#'   master <- loanbook %>%
-#'     match_name(abcd) %>%
-#'     prioritize() %>%
-#'     join_abcd_scenario(
-#'       abcd = abcd,
-#'       scenario = scenario_demo_2020,
-#'       region_isos = region_isos_demo
+#' loanbook <- head(loanbook_demo, 150)
+#' abcd <- head(abcd_demo, 100)
+#' master <- loanbook %>%
+#'   match_name(abcd) %>%
+#'   prioritize() %>%
+#'   join_abcd_scenario(
+#'     abcd = abcd,
+#'     scenario = scenario_demo_2020,
+#'     region_isos = region_isos_demo
 #'     ) %>%
-#'     dplyr::filter(production != 0)
+#'   dplyr::filter(production != 0)
 #'
-#'   summarize_weighted_production(master)
+#' summarize_weighted_production(master)
 #'
-#'   summarize_weighted_production(master, use_credit_limit = TRUE)
+#' summarize_weighted_production(master, use_credit_limit = TRUE)
 #'
-#'   summarize_weighted_percent_change(master)
+#' summarize_weighted_percent_change(master)
 #'
-#'   summarize_weighted_percent_change(master, use_credit_limit = TRUE)
-#' }
-#' }
+#' summarize_weighted_percent_change(master, use_credit_limit = TRUE)
 summarize_weighted_production <- function(data, ..., use_credit_limit = FALSE) {
   summarize_weighted_production_(data, ..., use_credit_limit = use_credit_limit, with_targets = FALSE)
 }
@@ -66,15 +58,13 @@ summarize_weighted_production_ <- function(data, ..., use_credit_limit = FALSE, 
 
   old_groups <- dplyr::groups(data)
 
-  data <- rename_and_warn_ald_names(data)
-
-  crucial <- c("production", "sector_abcd", "year", "technology")
+  crucial <- c("sector_abcd", "year", "technology")
 
   if (with_targets) {
     crucial <- c(crucial, "production_target")
   }
 
-  check_crucial_names(data, crucial)
+  check_crucial_names(data, c("production", crucial))
   walk_(crucial, ~ check_no_value_is_missing(data, .x))
 
   data <- data %>%
@@ -157,8 +147,6 @@ summarize_unweighted_production <- function(data, ..., with_targets = FALSE) {
 summarize_weighted_percent_change <- function(data, ..., use_credit_limit = FALSE) {
   stopifnot(is.data.frame(data))
 
-  data <- rename_and_warn_ald_names(data)
-
   data %>%
     ungroup() %>%
     add_loan_weight(use_credit_limit = use_credit_limit) %>%
@@ -175,8 +163,6 @@ summarize_weighted_percent_change <- function(data, ..., use_credit_limit = FALS
 summarize_weighted_emission_factor <- function(data, ..., use_credit_limit = FALSE) {
   stopifnot(is.data.frame(data))
 
-  data <- rename_and_warn_ald_names(data)
-
   data %>%
     ungroup() %>%
     add_loan_weight(use_credit_limit = use_credit_limit) %>%
@@ -190,8 +176,6 @@ summarize_weighted_emission_factor <- function(data, ..., use_credit_limit = FAL
 
 summarize_unweighted_emission_factor <- function(data, ...) {
 
-  data <- rename_and_warn_ald_names(data)
-
   data <- data %>%
     select(
       -all_of(c("id_loan", "loan_size_credit_limit", "loan_size_outstanding"))
@@ -203,10 +187,24 @@ summarize_unweighted_emission_factor <- function(data, ...) {
 }
 
 calculate_weighted_loan_metric <- function(data, metric) {
-  crucial <- c(metric, "loan_weight")
 
-  check_crucial_names(data, crucial)
-  walk_(crucial, ~ check_no_value_is_missing(data, .x))
+  check_crucial_names(data, c(metric, "loan_weight"))
+
+  allowed_missing_vals <- c(
+    "production",
+    "production_target",
+    "technology_share",
+    "technology_share_target",
+    "percent_change"
+  )
+
+  if (metric %in% allowed_missing_vals) {
+    no_missing_vals <- "loan_weight"
+  } else {
+    no_missing_vals <- c("loan_weight", metric)
+  }
+
+  walk_(no_missing_vals, ~ check_no_value_is_missing(data, .x))
 
   data %>%
     mutate(
@@ -250,9 +248,9 @@ add_loan_weight <- function(data, use_credit_limit) {
 }
 
 add_percent_change <- function(data) {
-  crucial <- c("production", "sector_abcd", "year", "technology", "scenario")
+  crucial <- c("sector_abcd", "year", "technology", "scenario")
 
-  check_crucial_names(data, crucial)
+  check_crucial_names(data, c("production", crucial))
   walk_(crucial, ~ check_no_value_is_missing(data, .x))
 
   check_zero_initial_production(data)
@@ -319,7 +317,7 @@ add_technology_share_target <- function(data) {
 
 check_zero_initial_production <- function(data) {
   companies_with_zero_initial_production <- data %>%
-    group_by(.data$technology, .data$name_abcd, .data$year) %>%
+    group_by(.data$technology, .data$name_abcd) %>%
     arrange(.data$year) %>%
     filter(.data$year == first(.data$year)) %>%
     summarize(production_at_start_year = sum(.data$production)) %>%

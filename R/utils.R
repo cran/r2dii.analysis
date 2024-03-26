@@ -23,6 +23,20 @@ filter_and_warn_na <- function(data, column) {
   return(data)
 }
 
+fill_and_warn_na <- function(data, column) {
+  if (anyNA(data[[column]])) {
+    name_dataset <- deparse(substitute(data))
+    warning_message = paste("Filling in rows of", name_dataset, "where `{column}` is NA with 0")
+    warn(
+      glue(warning_message),
+      class = "fill_nas_crucial_economic_input"
+    )
+
+    data[[column]] <- tidyr::replace_na(data[[column]], 0)
+  }
+  return(data)
+}
+
 warn_grouped <- function(data, message) {
   if (dplyr::is_grouped_df(data)) warn(message)
 
@@ -54,58 +68,6 @@ walk_ <- function(.x, .f, ...) {
 modify_at_ <- function(.x, .at, .f) {
   .x[[.at]] <- .f(.x[[.at]])
   .x
-}
-
-rename_and_warn_ald_names <- function(data) {
-
-  if (all(c("name_ald", "name_abcd") %in% names(data))) {
-
-    rlang::abort(
-      "too_many_sectors",
-      message = glue(
-        "Column `name_ald` is deprecated as of r2dii.match 0.1.0, please use
-        `name_abcd` instead."
-      )
-    )
-
-  } else if ("name_ald" %in% names(data)) {
-
-    rlang::warn(
-      "deprecated_name",
-      message = glue(
-        "Column `name_ald` is deprecated as of r2dii.match 0.1.0, please use
-        `name_abcd` instead."
-      )
-    )
-
-    data <- dplyr::rename(data, name_abcd = "name_ald")
-  }
-
-  if (all(c("sector_ald", "sector_abcd") %in% names(data))) {
-
-    rlang::abort(
-      "too_many_sectors",
-      message = glue(
-        "Column `sector_ald` is deprecated as of r2dii.analysis 0.2.0, please use
-        `sector_abcd` instead."
-      )
-    )
-
-  } else if ("sector_ald" %in% names(data)) {
-
-    rlang::warn(
-      "deprecated_name",
-      message = glue(
-        "Column `sector_ald` is deprecated as of r2dii.analysis 0.2.0, please use
-        `sector_abcd` instead."
-      )
-    )
-
-    data <- dplyr::rename(data, sector_abcd = "sector_ald")
-  }
-
-  data
-
 }
 
 change_to_lowercase_and_warn <- function(data, column) {

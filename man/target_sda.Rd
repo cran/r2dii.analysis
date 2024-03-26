@@ -11,8 +11,7 @@ target_sda(
   co2_intensity_scenario,
   use_credit_limit = FALSE,
   by_company = FALSE,
-  region_isos = r2dii.data::region_isos,
-  ald = deprecated()
+  region_isos = r2dii.data::region_isos
 )
 }
 \arguments{
@@ -33,9 +32,6 @@ the column \code{loan_size_outstanding}. Set to \code{TRUE} to instead use the c
 \code{weighted_production_value} at the company-level.}
 
 \item{region_isos}{A data frame like \link[r2dii.data:region_isos]{r2dii.data::region_isos} (default).}
-
-\item{ald}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#superseded}{\figure{lifecycle-superseded.svg}{options: alt='[Superseded]'}}}{\strong{[Superseded]}} \code{ald} has been superseded by
-\code{abcd}.}
 }
 \value{
 A tibble including the summarized columns \code{emission_factor_metric} and
@@ -54,40 +50,35 @@ This function ignores existing groups and outputs ungrouped data.
 }
 
 \examples{
-\dontrun{
-installed <- requireNamespace("r2dii.match", quietly = TRUE) &&
-  requireNamespace("r2dii.data", quietly = TRUE) &&
-  packageVersion("r2dii.match") >= "0.1.0"
+\dontshow{if (rlang::is_installed("r2dii.data") && rlang::is_installed("r2dii.match", version = "0.1.0")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 
-if (installed) {
-  library(r2dii.match)
-  library(r2dii.data)
+library(r2dii.match)
+library(r2dii.data)
 
-  loanbook <- head(loanbook_demo, 150)
-  abcd <- head(abcd_demo, 100)
+loanbook <- head(loanbook_demo, 150)
+abcd <- head(abcd_demo, 100)
 
-  matched <- loanbook \%>\%
-    match_name(abcd) \%>\%
-    prioritize()
+matched <- loanbook \%>\%
+  match_name(abcd) \%>\%
+  prioritize()
 
-  # Calculate targets at portfolio level
-  matched \%>\%
-    target_sda(
-      abcd = abcd,
-      co2_intensity_scenario = co2_intensity_scenario_demo,
-      region_isos = region_isos_demo
-    )
+# Calculate targets at portfolio level
+matched \%>\%
+  target_sda(
+   abcd = abcd,
+   co2_intensity_scenario = co2_intensity_scenario_demo,
+   region_isos = region_isos_demo
+   )
 
-  # Calculate targets at company level
-  matched \%>\%
-    target_sda(
-      abcd = abcd,
-      co2_intensity_scenario = co2_intensity_scenario_demo,
-      region_isos = region_isos_demo,
-      by_company = TRUE
-    )
-}
-}
+# Calculate targets at company level
+matched \%>\%
+  target_sda(
+   abcd = abcd,
+   co2_intensity_scenario = co2_intensity_scenario_demo,
+   region_isos = region_isos_demo,
+   by_company = TRUE
+   )
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other functions to calculate scenario targets: 
