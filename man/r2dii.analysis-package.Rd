@@ -13,17 +13,18 @@ These tools help you to assess if a corporate lending portfolio aligns with clim
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/RMI-PACTA/r2dii.analysis}
   \item \url{https://rmi-pacta.github.io/r2dii.analysis/}
+  \item \url{https://github.com/RMI-PACTA/r2dii.analysis}
   \item Report bugs at \url{https://github.com/RMI-PACTA/r2dii.analysis/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Alex Axthelm \email{aaxthelm@rmi.org} (\href{https://orcid.org/0000-0001-8579-8565}{ORCID})
+\strong{Maintainer}: Jacob Kastl \email{jacob.kastl@gmail.com} (\href{https://orcid.org/0009-0000-8281-8129}{ORCID}) [contractor]
 
 Authors:
 \itemize{
+  \item Alex Axthelm \email{aaxthelm@rmi.org} (\href{https://orcid.org/0000-0001-8579-8565}{ORCID}) [contractor]
   \item Jackson Hoffart \email{jackson.hoffart@gmail.com} (\href{https://orcid.org/0000-0002-8600-5042}{ORCID}) [contractor]
   \item Mauro Lepore \email{maurolepore@gmail.com} (\href{https://orcid.org/0000-0002-1986-7988}{ORCID}) [contractor]
   \item Klaus Hogedorn \email{klaus@2degrees-investing.org}
@@ -32,7 +33,7 @@ Authors:
 
 Other contributors:
 \itemize{
-  \item Rocky Mountain Institute \email{PACTA4banks@rmi.org} [copyright holder, funder]
+  \item RMI \email{PACTA4banks@rmi.org} [copyright holder, funder]
 }
 
 }

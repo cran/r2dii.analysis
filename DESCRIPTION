@@ -1,10 +1,15 @@
 Package: r2dii.analysis
 Title: Measure Climate Scenario Alignment of Corporate Loans
-Version: 0.4.0
+Version: 0.5.0
 Authors@R: 
-    c(person(given = "Alex",
+    c(person(given = "Jacob",
+             family = "Kastl",
+             role = c("aut", "cre", "ctr"),
+             email = "jacob.kastl@gmail.com",
+             comment = c(ORCID = "0009-0000-8281-8129")),
+      person(given = "Alex",
              family = "Axthelm",
-             role = c("aut", "cre"),
+             role = c("aut", "ctr"),
              email = "aaxthelm@rmi.org",
              comment = c(ORCID = "0000-0001-8579-8565")),
       person(given = "Jackson",
@@ -25,7 +30,7 @@ Authors@R:
              family = "Halterman",
              role = "aut",
              email = "nicholas.i.halterman@gmail.com"),
-      person(given = "Rocky Mountain Institute",
+      person(given = "RMI",
              role = c("cph", "fnd"),
              email = "PACTA4banks@rmi.org"))
 Description: These tools help you to assess if a corporate lending
@@ -38,10 +43,10 @@ Description: These tools help you to assess if a corporate lending
     to study how their capital allocation decisions align with climate
     change mitigation goals.
 License: MIT + file LICENSE
-URL: https://github.com/RMI-PACTA/r2dii.analysis,
-        https://rmi-pacta.github.io/r2dii.analysis/
+URL: https://rmi-pacta.github.io/r2dii.analysis/,
+        https://github.com/RMI-PACTA/r2dii.analysis
 BugReports: https://github.com/RMI-PACTA/r2dii.analysis/issues
-Depends: R (>= 3.4)
+Depends: R (>= 3.5)
 Imports: dplyr (>= 0.8.5), glue, lifecycle, magrittr, r2dii.data (>=
         0.4.0), rlang (>= 0.1.2), tidyr, tidyselect, zoo
 Suggests: covr, r2dii.match, rmarkdown, roxygen2, spelling, testthat
@@ -50,15 +55,17 @@ Config/testthat/edition: 3
 Config/Needs/website: rmi-pacta/pacta.pkgdown.rmitemplate
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
+LazyData: true
 NeedsCompilation: no
-Packaged: 2024-03-26 09:01:48 UTC; jdhoffa
-Author: Alex Axthelm [aut, cre] (<https://orcid.org/0000-0001-8579-8565>),
+Packaged: 2025-02-11 18:04:27 UTC; jkastl
+Author: Jacob Kastl [aut, cre, ctr] (<https://orcid.org/0009-0000-8281-8129>),
+  Alex Axthelm [aut, ctr] (<https://orcid.org/0000-0001-8579-8565>),
   Jackson Hoffart [aut, ctr] (<https://orcid.org/0000-0002-8600-5042>),
   Mauro Lepore [aut, ctr] (<https://orcid.org/0000-0002-1986-7988>),
   Klaus Hogedorn [aut],
   Nicky Halterman [aut],
-  Rocky Mountain Institute [cph, fnd]
-Maintainer: Alex Axthelm <aaxthelm@rmi.org>
+  RMI [cph, fnd]
+Maintainer: Jacob Kastl <jacob.kastl@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-03-26 11:30:03 UTC
+Date/Publication: 2025-02-13 23:50:02 UTC
