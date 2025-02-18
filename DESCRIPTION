@@ -1,6 +1,6 @@
 Package: r2dii.analysis
 Title: Measure Climate Scenario Alignment of Corporate Loans
-Version: 0.5.0
+Version: 0.5.1
 Authors@R: 
     c(person(given = "Jacob",
              family = "Kastl",
@@ -49,8 +49,8 @@ BugReports: https://github.com/RMI-PACTA/r2dii.analysis/issues
 Depends: R (>= 3.5)
 Imports: dplyr (>= 0.8.5), glue, lifecycle, magrittr, r2dii.data (>=
         0.4.0), rlang (>= 0.1.2), tidyr, tidyselect, zoo
-Suggests: covr, r2dii.match, rmarkdown, roxygen2, spelling, testthat
-        (>= 3.0.0), withr
+Suggests: cli, covr, r2dii.match, readr, rmarkdown, roxygen2, spelling,
+        testthat (>= 3.0.0), waldo, withr
 Config/testthat/edition: 3
 Config/Needs/website: rmi-pacta/pacta.pkgdown.rmitemplate
 Encoding: UTF-8
@@ -58,7 +58,7 @@ Language: en-US
 RoxygenNote: 7.3.2
 LazyData: true
 NeedsCompilation: no
-Packaged: 2025-02-11 18:04:27 UTC; jkastl
+Packaged: 2025-02-18 11:08:12 UTC; jkastl
 Author: Jacob Kastl [aut, cre, ctr] (<https://orcid.org/0009-0000-8281-8129>),
   Alex Axthelm [aut, ctr] (<https://orcid.org/0000-0001-8579-8565>),
   Jackson Hoffart [aut, ctr] (<https://orcid.org/0000-0002-8600-5042>),
@@ -68,4 +68,4 @@ Author: Jacob Kastl [aut, cre, ctr] (<https://orcid.org/0009-0000-8281-8129>),
   RMI [cph, fnd]
 Maintainer: Jacob Kastl <jacob.kastl@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-02-13 23:50:02 UTC
+Date/Publication: 2025-02-18 22:50:02 UTC
