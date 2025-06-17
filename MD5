@@ -1,7 +1,7 @@
-5576468151ea435e6a9c8d6b1d6cc1c9 *DESCRIPTION
+dcfbb5680ac3a8224b61e86351cea77c *DESCRIPTION
 9e142716e3230b8e04e5189f103979ef *LICENSE
 24c166577b34d5b95b3ca380c81a985d *NAMESPACE
-5287f9acbf58ab06866543d1145c0f54 *NEWS.md
+cc17426cf1305a697a3a9a97693bc567 *NEWS.md
 20dc9a55dbec38becd66a17cfb803915 *R/check_crucial_names.R
 67b71e456e282836bd15915285616a46 *R/data_dictionary.R
 70d4ad6668083e802f66be61a9359103 *R/imports.R
@@ -10,12 +10,12 @@ ab0399f70a7f81e257c9cabdbf1a36b2 *R/r2dii.analysis-package.R
 891672392e2f3c194e085fa5d1100122 *R/summarize_weighted_production.R
 31b54e82f0a9ef117350d36b1584bcf0 *R/sysdata.rda
 3eb97a1d81efc527efb827fe5d641412 *R/target_market_share.R
-e365488f2e6f98aa2bfe840eb9663974 *R/target_sda.R
+d780584454ef59b0a2d875e043eac4c7 *R/target_sda.R
 b56ff2b193ecba52f9ec7f3b10cca008 *R/utils-pipe.R
 f6ba754910f253e58dc138299023a618 *R/utils-tidy-eval.R
 cb727af67b2e4dc58c4d5ff4225ef6d5 *R/utils.R
-baebcd5625be4c96a21e76cfc336b80d *README.md
-eed7a40a0bfdc1ad448dc8be4d59e5e2 *data/data_dictionary.rda
+c781bfc65ff569f29da75a8f3cab5803 *README.md
+846b950fc37f1546ddc61c0c24853f17 *data/data_dictionary.rda
 b2cbca6821c4eef29e62898d98e63113 *inst/WORDLIST
 cf17c99e79b78f5b04f19964907d0d87 *man/data_dictionary.Rd
 cb1e46f469cfbbbde29c8b5113e1d789 *man/figures/lifecycle-archived.svg
@@ -32,7 +32,7 @@ dd683bcc723aec22b35509614001e3b9 *man/figures/logo.png
 29444a89feba08c6334f3514dae51b40 *man/r2dii.analysis-package.Rd
 d29cdba09601da2519a30e835add6598 *man/summarize_weighted_production.Rd
 ec9b1f3d2a396749a57856677d71bb07 *man/target_market_share.Rd
-73f7426cd325a55f162d3b75c63b4c72 *man/target_sda.Rd
+7cefbfa97bc6297125eb92bf72ff5fe2 *man/target_sda.Rd
 7206940e6fdf63952e91367de7087434 *man/tidyeval.Rd
 50f330eeca8db092d6807e04457bd06d *tests/spelling.R
 65d5676a923318089123ea029299b5d0 *tests/testthat.R
@@ -43,7 +43,7 @@ ec9b1f3d2a396749a57856677d71bb07 *man/target_market_share.Rd
 c34cf2c757665b197bbf721c55e6bff5 *tests/testthat/helper-fake_data.R
 24b2bda1b9a18f734df31df0be42aeb4 *tests/testthat/helper-utils.R
 9f8de52035b39a338375e286ccf7d5c1 *tests/testthat/test-data_dictionary.R
-a73dd894a337d21735b1fe3248eaa311 *tests/testthat/test-join_abcd_scenario.R
-2fbd34114fdd829a2dc612cc588ac5ed *tests/testthat/test-summarize_weighted_production.R
-30e1a48f2968304efc06e6a7b92146bd *tests/testthat/test-target_market_share.R
-9706b0cb071db6a0befd615fa28d964a *tests/testthat/test-target_sda.R
+016d85683440e0912b0aac0229d9c386 *tests/testthat/test-join_abcd_scenario.R
+e4203f73bff93c84354fa978e57066c1 *tests/testthat/test-summarize_weighted_production.R
+26204ec96b8ea0013240d87179e89d33 *tests/testthat/test-target_market_share.R
+ecb8fe34ce4fccf80032eb9843e532fd *tests/testthat/test-target_sda.R
